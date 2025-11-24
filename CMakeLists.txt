@@ -13,30 +13,17 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/lib")
-
-target_link_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/dxc/lib")
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/lib/Vulkan/include")
 target_link_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/GLFW")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw3.lib d3d12.lib dxcompiler.lib dxgi.lib)
+find_package(Vulkan REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw3.lib)
+
 add_subdirectory(lib/glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 
-set(DLL_FILES
-    "${CMAKE_CURRENT_LIST_DIR}/lib/dxc/bin/dxcompiler.dll"
-    "${CMAKE_CURRENT_LIST_DIR}/lib/dxc/bin/dxil.dll"
-    "${CMAKE_CURRENT_LIST_DIR}/lib/d3d12/lib/D3D12Core.dll"
-    "${CMAKE_CURRENT_LIST_DIR}/lib/d3d12/lib/D3D12Core.pdb"
-    "${CMAKE_CURRENT_LIST_DIR}/lib/d3d12/lib/d3d12SDKLayers.dll"
-    "${CMAKE_CURRENT_LIST_DIR}/lib/d3d12/lib/d3d12SDKLayers.pdb"
-)
-
-foreach(DLL_FILE ${DLL_FILES})
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${DLL_FILE} $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        COMMENT "Copying ${DLL_FILE} to the output directory"
-    )
-endforeach()
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE

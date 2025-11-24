@@ -1,15 +1,17 @@
-﻿// Vee.cpp : Defines the entry point for the application.
-//
-
-#include "Vee.hpp"
-#include "Window.hpp"
+﻿#include "Vee.hpp"
+#include "platform/windows/windows_window.hpp"
 
 using namespace std;
 
 int main()
 {
-	Vee::Window* window = new Vee::Window("Vee", 1280, 720);
+	vee::IWindow* window = new vee::WindowsWindow();
 
+	vee::WindowProperties props;
+	props.Name = "Vee Engine";
+	props.Width = 1280;
+	props.Height = 720;
+	window->Initialize(props);
 	while (!window->ShouldClose())
 	{
 		window->Update();
