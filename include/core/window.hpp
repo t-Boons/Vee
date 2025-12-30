@@ -1,13 +1,15 @@
 #pragma once
 #include "common.hpp"
+#include "render_context.hpp"
 
 namespace vee
 {
     struct WindowProperties
     {
-        std::string Name;
-        uint32_t Width;
-        uint32_t Height;
+        std::string Name = "Vee Window";
+        uint32_t Width = 1280;
+        uint32_t Height = 720;
+        RefPtr<IRenderContext> RenderContext = nullptr;
     };
 
     class IWindow : public NonCopyable
