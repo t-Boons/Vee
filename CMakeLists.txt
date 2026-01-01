@@ -24,7 +24,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glfw3.lib)
 add_subdirectory(lib/glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 
-
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         $<$<CONFIG:Debug>:VEE_DEBUG>
