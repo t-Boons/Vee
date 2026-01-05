@@ -2,7 +2,7 @@
 
 namespace vee
 {
-    class VulkanShader : public IShader
+    class VulkanShader : public Shader
     {
     public:
         VulkanShader(ShaderType type, const std::string& filepath);

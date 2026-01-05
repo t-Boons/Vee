@@ -38,7 +38,7 @@ namespace vee
 		int Delta;
 	};
 
-	class WindowsWindow : public IWindow
+	class WindowsWindow : public Window
 	{
 	public:
 		struct WindowEvents

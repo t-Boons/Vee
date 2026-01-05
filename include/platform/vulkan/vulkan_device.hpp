@@ -9,11 +9,18 @@ namespace vee
     {  
     public:
         VulkanDevice();
-        
+        ~VulkanDevice() override;
+
     private:
+        std::vector<const char*> GetExtentions(bool validationLayers);
+
+        void SetupDebugMessenger();
+
         VkDevice m_device;
         VkPhysicalDevice m_physicalDevice;
         VkInstance m_instance;
+        VkDebugUtilsMessengerEXT m_debugMessenger;
+        bool m_enableValidationLayers;
     };
 
     static VulkanDevice* g_vkDevice;

@@ -12,5 +12,7 @@ namespace vee
 
     class Device : public NonCopyable
     {
+    public:
+        virtual ~Device() = default;
     };
 }

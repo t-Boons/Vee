@@ -35,6 +35,7 @@ namespace vee
 
 	WindowsWindow::~WindowsWindow()
 	{
+		glfwDestroyWindow(m_window);
 		glfwTerminate();
 	}
 

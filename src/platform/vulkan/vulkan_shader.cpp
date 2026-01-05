@@ -3,7 +3,7 @@
 namespace vee
 {
     VulkanShader::VulkanShader(ShaderType type, const std::string &filepath)
-        : IShader(type, filepath)
+        : Shader(type, filepath)
     {
         // Load SPIR-V code from file.
         std::ifstream file(filepath, std::ios::ate | std::ios::binary);
