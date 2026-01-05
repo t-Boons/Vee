@@ -31,7 +31,7 @@ namespace vee
 		localtime_s(&now, &t);
 
 		printf(color);
-		printf("[Butterfly %i-%i-%i:%i:%i:%i] ", (int)now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+		printf("[Vee %i-%i-%i:%i:%i:%i] ", (int)now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
 		printf(format, args...);
 		printf(RESET);
 		printf("\n");
