@@ -5,12 +5,19 @@
 
 namespace vee
 {
+    VulkanDevice* g_vkDevice = nullptr;
+
+    VulkanDevice *vee::VKDevice()
+    {
+        CheckMsg(g_vkDevice, "Vulkan Device not initialized.");
+        return g_vkDevice;
+    }
+
     VulkanDevice::VulkanDevice(bool enableValidationLayers)
-    : m_enableValidationLayers(enableValidationLayers)
+        : m_enableValidationLayers(enableValidationLayers)
     {
         m_instance = new VulkanInstance(m_enableValidationLayers);
         m_physicalDevice = new VulkanPhysicalDevice(m_instance);
-        Log::Info("Vulkan selected GPU: %s", m_physicalDevice->GetDeviceName().c_str());
         m_device = new VulkanLogicalDevice(m_physicalDevice);
     }
 

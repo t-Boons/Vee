@@ -12,6 +12,8 @@ namespace vee
         VulkanDevice(bool enableValidationLayers);
         ~VulkanDevice() override;
 
+        std::string GetDeviceName() const { return m_physicalDevice->GetDeviceName(); }
+
     private:
         VulkanLogicalDevice* m_device;
         VulkanInstance* m_instance;
@@ -19,10 +21,8 @@ namespace vee
         bool m_enableValidationLayers;
     };
 
-    static VulkanDevice *g_vkDevice;
+    extern VulkanDevice* g_vkDevice;
+    VulkanDevice* VKDevice();
 
-    static VulkanDevice *VKDevice()
-    {
-        return g_vkDevice;
-    }
+
 }

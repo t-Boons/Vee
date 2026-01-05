@@ -59,7 +59,6 @@ namespace vee
             }
         }
 
-        // Save the data.
         Log::Assert(m_physicalDevice != VK_NULL_HANDLE, "Failed to find a suitable GPU.");
     }
 }

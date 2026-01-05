@@ -19,6 +19,8 @@ int main()
 	props.Height = 720;
 	vee::Window* window = new vee::WindowsWindow(props);
 	
+    vee::Log::Info("Vulkan selected GPU: %s", vee::VKDevice()->GetDeviceName().c_str());
+
 	while (!window->ShouldClose())
 	{
 		window->Update();
