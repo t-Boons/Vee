@@ -3,29 +3,27 @@
 
 namespace vee
 {
-    bool WindowsWindow::ShouldClose() const
+	bool WindowsWindow::ShouldClose() const
 	{
 		return glfwWindowShouldClose(m_window);
 	}
 
-	void WindowsWindow::Initialize(WindowProperties properties)
+	WindowsWindow::WindowsWindow(WindowProperties properties)
+		: m_properties(properties), m_window(nullptr), m_oldTime(0.0f), m_deltaTime(0.0f), m_time(0.0f)
 	{
 		m_properties = properties;
 		InitGLFW();
 		BindGLFWCallbacks();
 		BindEvents();
 
-
-		const char* extensions[6] = {
+		const char *extensions[6] = {
 			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, 
-			VK_KHR_SPIRV_1_4_EXTENSION_NAME,             
-			VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME  
-		};
-    }
-
+			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+			VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+			VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
+	}
 
 	void WindowsWindow::Update()
 	{
@@ -33,6 +31,11 @@ namespace vee
 		m_time = static_cast<float>(glfwGetTime());
 		m_deltaTime = m_time - m_oldTime;
 		glfwPollEvents();
+	}
+
+	WindowsWindow::~WindowsWindow()
+	{
+		glfwTerminate();
 	}
 
 	void WindowsWindow::InitGLFW()
@@ -62,18 +65,17 @@ namespace vee
 	{
 		glfwSetWindowUserPointer(m_window, &m_events);
 
-		glfwSetWindowSizeCallback(m_window, [](GLFWwindow* window, int width, int height)
-			{
+		glfwSetWindowSizeCallback(m_window, [](GLFWwindow *window, int width, int height)
+								  {
 				WindowResizeEvent event;
 				event.Width = static_cast<uint32_t>(width);
 				event.Height = static_cast<uint32_t>(height);
 
 				WindowEvents* data = static_cast<WindowEvents*>(glfwGetWindowUserPointer(window));
-				data->OnWindowResize.Broadcast(event);
-			});
+				data->OnWindowResize.Broadcast(event); });
 
-		glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int, int action, int)
-			{
+		glfwSetKeyCallback(m_window, [](GLFWwindow *window, int key, int, int action, int)
+						   {
 				if (action != 2)
 				{
 					KeyEvent event;
@@ -82,46 +84,40 @@ namespace vee
 
 					WindowEvents* data = static_cast<WindowEvents*>(glfwGetWindowUserPointer(window));
 					data->OnKeyEvent.Broadcast(event);
-				}
-			});
+				} });
 
-		glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double deltaX, double deltaY)
-			{
+		glfwSetCursorPosCallback(m_window, [](GLFWwindow *window, double deltaX, double deltaY)
+								 {
 				MousePointerEvent event;
 				event.X = static_cast<int>(deltaX);
 				event.Y = static_cast<int>(deltaY);
 
 				WindowEvents* data = static_cast<WindowEvents*>(glfwGetWindowUserPointer(window));
-				data->OnPointerEvent.Broadcast(event);
-			});
+				data->OnPointerEvent.Broadcast(event); });
 
-		glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int)
-			{
+		glfwSetMouseButtonCallback(m_window, [](GLFWwindow *window, int button, int action, int)
+								   {
 				MouseButtonEvent event;
 				event.Button = button;
 				event.Pressed = action;
 
 				WindowEvents* data = static_cast<WindowEvents*>(glfwGetWindowUserPointer(window));
-				data->OnMouseEvent.Broadcast(event);
-			});
+				data->OnMouseEvent.Broadcast(event); });
 
-		glfwSetScrollCallback(m_window, [](GLFWwindow* window, double, double deltaY)
-			{
+		glfwSetScrollCallback(m_window, [](GLFWwindow *window, double, double deltaY)
+							  {
 				MouseScrollEvent event;
 				event.Delta = static_cast<int>(deltaY);
 
 				WindowEvents* data = static_cast<WindowEvents*>(glfwGetWindowUserPointer(window));
-				data->OnScrollEvent.Broadcast(event);
-			});
-
+				data->OnScrollEvent.Broadcast(event); });
 	}
 
 	void WindowsWindow::BindEvents()
 	{
-		m_events.OnWindowResize.Subscribe([&](const WindowResizeEvent& ev)
-			{
+		m_events.OnWindowResize.Subscribe([&](const WindowResizeEvent &ev)
+										  {
 				m_properties.Width = ev.Width;
-				m_properties.Height = ev.Height;
-			});
+				m_properties.Height = ev.Height; });
 	}
 }

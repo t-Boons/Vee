@@ -50,35 +50,38 @@ namespace vee
 			EventDispatcher<MouseScrollEvent> OnScrollEvent;
 		};
 
-		virtual void Initialize(WindowProperties properties) override;
-		virtual bool ShouldClose() const override;
-		virtual void Update() override;
+			WindowsWindow(WindowProperties properties);
 
-		virtual uint32_t Width() const override { return m_properties.Width; }
-		virtual uint32_t Height() const override { return m_properties.Height; }
-		virtual std::string Name() const override { return m_properties.Name; }
-		GLFWwindow* GLFWWindow() const { return m_window; }
+			virtual bool ShouldClose() const override;
+			virtual void Update() override;
 
-		float Time() const { return m_time; }
-		float DeltaTime() const { return m_deltaTime; }
+			virtual uint32_t Width() const override { return m_properties.Width; }
+			virtual uint32_t Height() const override { return m_properties.Height; }
+			virtual std::string Name() const override { return m_properties.Name; }
+			GLFWwindow *GLFWWindow() const { return m_window; }
 
-		float AspectRatio() const { return static_cast<float>(m_properties.Width) / static_cast<float>(m_properties.Height); }
+			float Time() const { return m_time; }
+			float DeltaTime() const { return m_deltaTime; }
 
-		WindowEvents& Events() { return m_events; }
+			float AspectRatio() const { return static_cast<float>(m_properties.Width) / static_cast<float>(m_properties.Height); }
 
-	private:
-		void InitGLFW();
-		void BindGLFWCallbacks();
-		void BindEvents();
+			WindowEvents &Events() { return m_events; }
 
-		float m_oldTime;
-		float m_deltaTime;
-		float m_time;
+			~WindowsWindow();
 
-		WindowProperties m_properties;
-		GLFWwindow* m_window;
-		std::string m_name;
-		HWND m_hwnd;
-		WindowEvents m_events;
-	};
+		private:
+			void InitGLFW();
+			void BindGLFWCallbacks();
+			void BindEvents();
+
+			float m_oldTime;
+			float m_deltaTime;
+			float m_time;
+
+			WindowProperties m_properties;
+			GLFWwindow *m_window;
+			std::string m_name;
+			HWND m_hwnd;
+			WindowEvents m_events;
+		};
 }
