@@ -10,12 +10,13 @@ namespace vee
     {
         m_instance = new VulkanInstance(m_enableValidationLayers);
         m_physicalDevice = new VulkanPhysicalDevice(m_instance);
-
         Log::Info("Vulkan selected GPU: %s", m_physicalDevice->GetDeviceName().c_str());
+        m_device = new VulkanLogicalDevice(m_physicalDevice);
     }
 
     VulkanDevice::~VulkanDevice()
     {
+        FREE(m_device);
         FREE(m_physicalDevice);
         FREE(m_instance);
     }

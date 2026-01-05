@@ -5,5 +5,5 @@
 #define VKValidate(x) \
     if (x != VK_SUCCESS) \
     { \
-        vee::Log::Assert(false, "Vulkan error: %d", x); \
+        vee::Log::Error("Vulkan error: %d", x); \
     }

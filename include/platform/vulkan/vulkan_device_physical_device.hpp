@@ -11,9 +11,10 @@ namespace vee
 
         void SelectBestPhysicalDevice(VulkanInstance* instance);
         std::string GetDeviceName() const { return m_deviceProperties.deviceName; }
-
+        VkPhysicalDevice GetVKPhysicalDevice() const { return m_physicalDevice; }
     private:
         VkPhysicalDevice m_physicalDevice;
         VkPhysicalDeviceProperties m_deviceProperties;
+
     };
 }

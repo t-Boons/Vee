@@ -54,15 +54,12 @@ namespace vee
             const int score = RatePhysicalDevice(device);
             if (IsPhysicalDeviceSuitable(device) && score > bestScore)
             {
-                physicalDevice = device;
+                m_physicalDevice = device;
+                vkGetPhysicalDeviceProperties(device, &m_deviceProperties);
             }
         }
 
         // Save the data.
-        Log::Assert(physicalDevice != VK_NULL_HANDLE, "Failed to find a suitable GPU.");
-
-        vkGetPhysicalDeviceProperties(physicalDevice, &m_deviceProperties);
-        
-        m_physicalDevice = physicalDevice;
+        Log::Assert(m_physicalDevice != VK_NULL_HANDLE, "Failed to find a suitable GPU.");
     }
 }
