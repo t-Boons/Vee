@@ -1,6 +1,5 @@
 #include "platform/vulkan/vulkan_device_instance.hpp"
 #include "platform/vulkan/vulkan_common.hpp"
-#include <GLFW/glfw3.h>
 
 namespace vee
 {
@@ -80,11 +79,12 @@ namespace vee
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         extensions = std::vector<const char *>(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
+        
         if (validationLayers)
         {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
+
 
         createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
         createInfo.ppEnabledExtensionNames = extensions.data();

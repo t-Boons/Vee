@@ -1,5 +1,5 @@
 #pragma once
-#include "platform/vulkan/vulkan_common.hpp"
+#include "vulkan_common.hpp"
 #include "platform/vulkan/vulkan_device_instance.hpp"
 
 namespace vee

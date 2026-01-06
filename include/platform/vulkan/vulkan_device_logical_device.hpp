@@ -18,6 +18,7 @@ namespace vee
     public:
         VulkanLogicalDevice(VulkanPhysicalDevice* physicalDevice);
         ~VulkanLogicalDevice();
+        VkDevice& GetVKDevice() { return m_device; }
         VkQueue& GetQueue(QueueType type) { return m_queues[type]; }
 
     private:

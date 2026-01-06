@@ -20,12 +20,17 @@ namespace vee
 
         VkPhysicalDeviceFeatures deviceFeatures{};
 
+
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.pQueueCreateInfos = &queueCreateInfo;
         createInfo.queueCreateInfoCount = 1;
 
         createInfo.pEnabledFeatures = &deviceFeatures;
+
+        const std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
+        createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
 
         VKValidate(vkCreateDevice(physicalDevice->GetVKPhysicalDevice(), &createInfo, nullptr, &m_device));
 

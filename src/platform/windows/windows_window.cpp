@@ -1,5 +1,9 @@
-#include "vulkan/vulkan.hpp"
 #include "platform/windows/windows_window.hpp"
+
+#define GLFW_INCLUDE_VULKAN
+#include <glfw/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <glfw/glfw3native.h>
 
 namespace vee
 {
@@ -15,14 +19,6 @@ namespace vee
 		InitGLFW();
 		BindGLFWCallbacks();
 		BindEvents();
-
-		const char *extensions[6] = {
-			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-			VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-			VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
 	}
 
 	void WindowsWindow::Update()
@@ -59,7 +55,6 @@ namespace vee
 
 		glfwShowWindow(m_window);
 		glfwMakeContextCurrent(m_window);
-		m_hwnd = glfwGetWin32Window(m_window);
 	}
 
 	void WindowsWindow::BindGLFWCallbacks()

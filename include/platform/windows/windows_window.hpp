@@ -1,11 +1,9 @@
 #pragma once
-#include <glfw/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <glfw/glfw3native.h>
-
 #include "core/common.hpp"
 #include "core/event_dispatcher.hpp"
 #include "core/window.hpp"
+
+struct GLFWwindow;
 
 namespace vee
 {
@@ -58,7 +56,7 @@ namespace vee
 			virtual uint32_t Width() const override { return m_properties.Width; }
 			virtual uint32_t Height() const override { return m_properties.Height; }
 			virtual std::string Name() const override { return m_properties.Name; }
-			GLFWwindow *GLFWWindow() const { return m_window; }
+			GLFWwindow* GLFWWindow() const { return m_window; }
 
 			float Time() const { return m_time; }
 			float DeltaTime() const { return m_deltaTime; }
@@ -81,7 +79,6 @@ namespace vee
 			WindowProperties m_properties;
 			GLFWwindow *m_window;
 			std::string m_name;
-			HWND m_hwnd;
 			WindowEvents m_events;
 		};
 }

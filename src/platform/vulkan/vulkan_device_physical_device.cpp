@@ -41,11 +41,11 @@ namespace vee
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
         uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(instance->GetInstance(), &deviceCount, nullptr);
+        vkEnumeratePhysicalDevices(instance->GetVkInstance(), &deviceCount, nullptr);
         Log::Assert(deviceCount != 0, "Failed to find GPUs with Vulkan support.");
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(instance->GetInstance(), &deviceCount, devices.data());
+        vkEnumeratePhysicalDevices(instance->GetVkInstance(), &deviceCount, devices.data());
 
         // Select the best device.
         int bestScore = 0;

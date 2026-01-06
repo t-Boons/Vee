@@ -1,5 +1,5 @@
 #pragma once
-#include "vulkan/vulkan.hpp"
+#include "vulkan_common.hpp"
 
 namespace vee
 {
@@ -9,7 +9,7 @@ namespace vee
         VulkanInstance(bool enableValidationLayers);
         ~VulkanInstance();
 
-        const VkInstance& GetInstance() const { return m_instance; }
+        VkInstance& GetVkInstance() { return m_instance; }
 
     private:
         VkInstance m_instance;
