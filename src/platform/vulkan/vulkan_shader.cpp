@@ -1,4 +1,5 @@
 #include "platform/vulkan/vulkan_shader.hpp"
+#include "platform/vulkan/vulkan_device.hpp"
 
 namespace vee
 {
@@ -17,6 +18,39 @@ namespace vee
         file.read(m_spirvCode.data(), fileSize);
         file.close();
         Log::Info("Loaded shader: %s (%d bytes)", filepath.c_str(), fileSize);
+
+
+        VkShaderModuleCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = m_spirvCode.size();
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(m_spirvCode.data());
+
+        VKValidate(vkCreateShaderModule(VKDevice()->GetLogicalDevice()->GetVKDevice(), &createInfo, nullptr, &m_shaderModule));
+
+        VkShaderStageFlagBits stage = VK_SHADER_STAGE_ALL;
+        switch (type)
+        {
+        case ShaderType::Vertex:
+            stage = VK_SHADER_STAGE_VERTEX_BIT;
+            break;
+        case ShaderType::Fragment:
+            stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+            break;
+        default:
+            break;
+        }
+
+        VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+        vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        vertShaderStageInfo.stage = stage;
+        vertShaderStageInfo.module = m_shaderModule;
+        vertShaderStageInfo.pName = "main";
+        m_shaderStageInfo = vertShaderStageInfo;
+    }
+
+    VulkanShader::~VulkanShader()
+    {
+        vkDestroyShaderModule(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_shaderModule, nullptr);
     }
 
 }
