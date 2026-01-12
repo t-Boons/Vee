@@ -52,24 +52,12 @@ int main()
 	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-	VkViewport viewport{};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float) props.Width;
-	viewport.height = (float) props.Height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	VkRect2D scissor{};
-	scissor.offset = {0, 0};
-	scissor.extent = {props.Width, props.Height};
-
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.viewportCount = 1;
-	viewportState.pViewports = &viewport;
+	viewportState.pViewports = nullptr;
 	viewportState.scissorCount = 1;
-	viewportState.pScissors = &scissor;
+	viewportState.pScissors = nullptr;
 
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -222,10 +210,11 @@ int main()
 
 		vkWaitForFences(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 		vkResetFences(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &inFlightFence);
-
+		
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
+		
+		
 		// Record command buffer.
 		vkResetCommandBuffer(commandBuffer, 0);
 
