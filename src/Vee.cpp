@@ -1,12 +1,28 @@
 ﻿#include "Vee.hpp"
+#include "platform/vulkan/vulkan_common.hpp"
 #include "platform/windows/windows_window.hpp"
 #include "platform/vulkan/vulkan_device.hpp"
 #include "platform/vulkan/vulkan_shader.hpp"
 #include "platform/vulkan/vulkan_surface.hpp"
 #include "platform/vulkan/vulkan_swapchain.hpp"
 #include "platform/vulkan/vulkan_shader.hpp"
+#include "glm/glm.hpp"
 
 using namespace std;
+
+uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(vee::VKDevice()->GetPhysicalDevice()->GetVKPhysicalDevice(), &memProperties);
+
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+	{
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+		{
+			return i;
+		}
+	}
+}
 
 int main()
 {
@@ -41,11 +57,64 @@ int main()
 
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+
+	struct Vertex
+	{
+		glm::vec2 pos;
+		glm::vec3 color;
+
+		static VkVertexInputBindingDescription getBindingDescription()
+		{
+			VkVertexInputBindingDescription bindingDescription{};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(Vertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			return bindingDescription;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+		{
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+			VkVertexInputAttributeDescription posAttributeDescription{};
+			posAttributeDescription.binding = 0;
+			posAttributeDescription.location = 0;
+			posAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+			posAttributeDescription.offset = offsetof(Vertex, pos);
+			attributeDescriptions[0] = posAttributeDescription;
+
+			VkVertexInputAttributeDescription colorAttributeDescription{};
+			colorAttributeDescription.binding = 0;
+			colorAttributeDescription.location = 1;
+			colorAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			colorAttributeDescription.offset = offsetof(Vertex, color);
+			attributeDescriptions[1] = colorAttributeDescription;
+
+			return attributeDescriptions;
+		}
+
+	};
+
+	const std::vector<Vertex> vertices = {
+    {{ 0.0f, -0.5f }, {1.0f, 0.0f, 0.0f}},
+    {{ 0.5f,  0.5f }, {0.0f, 1.0f, 1.0f}},
+    {{-0.5f,  0.5f }, {0.0f, 0.0f, 1.0f}},
+	};
+
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+
+
+
+
+
+
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -204,6 +273,39 @@ int main()
     VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore));
     VKValidate(vkCreateFence(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &fenceInfo, nullptr, &inFlightFence));
 
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VkBuffer vertexBuffer;
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VKValidate(vkCreateBuffer(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &bufferInfo, nullptr, &vertexBuffer));
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBuffer, &memRequirements);
+
+	VkMemoryAllocateInfo memAllocInfo{};
+	memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memAllocInfo.allocationSize = memRequirements.size;
+	memAllocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	VkDeviceMemory vertexBufferMemory;
+	vkAllocateMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &memAllocInfo, nullptr, &vertexBufferMemory);
+
+	vkBindBufferMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBuffer, vertexBufferMemory, 0);
+
+	void* data;
+	vkMapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+	vkUnmapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory);
+
+
 	while (!window->ShouldClose())
 	{
 		window->Update();
@@ -251,6 +353,10 @@ int main()
 		scissor.offset = {0, 0};
 		scissor.extent = {1280, 720};
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+		VkBuffer vertexBuffers[] = {vertexBuffer};
+		VkDeviceSize offsets[] = {0};
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
 		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 

@@ -3,7 +3,6 @@
 project(Vee LANGUAGES CXX)
 
 file(GLOB_RECURSE VEE "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/lib/imgui/*.hpp")
-file(GLOB_RECURSE IMGUI "${CMAKE_CURRENT_LIST_DIR}/lib/imgui/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/lib/imgui/*.h")
 
 add_executable(${PROJECT_NAME} ${VEE} ${IMGUI})
 
