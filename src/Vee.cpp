@@ -11,6 +11,7 @@
 
 using namespace std;
 
+	// Taken from https://vulkan-tutorial.com/
 	struct Vertex
 	{
 		glm::vec2 pos;
@@ -48,7 +49,7 @@ using namespace std;
 
 	};
 
-
+// Taken from https://vulkan-tutorial.com/
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
@@ -111,23 +112,11 @@ int main()
 	vee::VulkanPipeline* pipeline = new vee::VulkanPipeline(pipelineInfo);
 
 
-	VkPipelineLayout pipelineLayout;
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // Optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-	VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout))
-
-
-
-
+	// Taken from https://vulkan-tutorial.com/
 	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.queueFamilyIndex = 0;
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = 0;
 
 	VkCommandPool commandPool;
 	VKValidate(vkCreateCommandPool(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &poolInfo, nullptr, &commandPool));
@@ -141,7 +130,6 @@ int main()
 	allocInfo.commandBufferCount = 1;
 
 	VKValidate(vkAllocateCommandBuffers(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &commandBuffer));
-
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -161,13 +149,13 @@ int main()
 
 	VkBufferCreateInfo bufferInfo{};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.size = sizeof(Vertex) * vertices.size();
 	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VkBuffer vertexBuffer;
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.size = sizeof(Vertex) * vertices.size();
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -183,12 +171,11 @@ int main()
 
 	VkDeviceMemory vertexBufferMemory;
 	vkAllocateMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &memAllocInfo, nullptr, &vertexBufferMemory);
-
 	vkBindBufferMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBuffer, vertexBufferMemory, 0);
 
 	void* data;
 	vkMapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-		memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+	memcpy(data, vertices.data(), static_cast<uint64_t>(bufferInfo.size));
 	vkUnmapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory);
 
 
@@ -208,8 +195,8 @@ int main()
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = 0;				  // Optional
-		beginInfo.pInheritanceInfo = nullptr; // Optional
+		beginInfo.flags = 0;
+		beginInfo.pInheritanceInfo = nullptr;
 
 		VKValidate(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
@@ -219,7 +206,7 @@ int main()
 		renderPassBeginInfo.framebuffer = swapchain->GetSwapchainFrameBufferFromIndex(imageIndex);
 		renderPassBeginInfo.renderArea.offset = {0, 0};
 		renderPassBeginInfo.renderArea.extent = {1280, 720};
-		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+		VkClearValue clearColor = {{{0.02f, 0.02f, 0.07f, 1.0f}}};
 		renderPassBeginInfo.clearValueCount = 1;
 		renderPassBeginInfo.pClearValues = &clearColor;
 
@@ -241,8 +228,8 @@ int main()
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 		VkBuffer vertexBuffers[] = {vertexBuffer};
-		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &offset);
 
 		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
@@ -255,20 +242,16 @@ int main()
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
-		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
+		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &commandBuffer;
 
-		VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		
+		submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 		
 		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, inFlightFence));
 
@@ -277,16 +260,16 @@ int main()
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
+		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
 		
-		VkSwapchainKHR swapChains[] = {swapchain->GetVKSwapchain()};
 		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
+		presentInfo.pSwapchains = &swapchain->GetVKSwapchain();
 		presentInfo.pImageIndices = &imageIndex;
-		presentInfo.pResults = nullptr; // Optional
-		vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo);
+		presentInfo.pResults = nullptr;
+		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
 	}
 
+	// Cleanup.
 	vkDestroyFence(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), inFlightFence, nullptr);
 	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), renderFinishedSemaphore, nullptr);
