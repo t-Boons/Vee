@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "buffer.hpp"
 
 namespace vee
 {
@@ -8,6 +9,13 @@ namespace vee
         Fragment,
         Compute,
     };
+
+    struct ShaderBinding
+    {
+        RefPtr<Buffer> Buffer;
+        uint32_t Index;
+    };
+
 
     class Shader : public NonCopyable
     {

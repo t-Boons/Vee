@@ -23,6 +23,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glfw3.lib)
 add_subdirectory(lib/glm)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 
+add_subdirectory(lib/VulkanMemoryAllocator)
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/VulkanMemoryAllocator/include")
+
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         $<$<CONFIG:Debug>:VEE_DEBUG>
