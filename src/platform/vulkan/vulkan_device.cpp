@@ -19,6 +19,14 @@ namespace vee
         m_instance = new VulkanInstance(m_enableValidationLayers);
         m_physicalDevice = new VulkanPhysicalDevice(m_instance);
         m_device = new VulkanLogicalDevice(m_physicalDevice);
+
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.instance = m_instance->GetVkInstance();
+        allocatorInfo.physicalDevice = m_physicalDevice->GetVKPhysicalDevice();
+        allocatorInfo.device = m_device->GetVKDevice();
+        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+
+        vmaCreateAllocator(&allocatorInfo, &m_allocator);
     }
 
     VulkanDevice::~VulkanDevice()

@@ -15,6 +15,7 @@ namespace vee
         VulkanLogicalDevice* GetLogicalDevice() const { return m_device; }
         VulkanPhysicalDevice* GetPhysicalDevice() const { return m_physicalDevice; }
         VulkanInstance* GetInstance() const { return m_instance; }
+        VmaAllocator GetAllocator() const { return m_allocator; }
         bool IsValidationLayersEnabled() const { return m_enableValidationLayers; }
 
 
@@ -24,6 +25,7 @@ namespace vee
         VulkanLogicalDevice* m_device;
         VulkanInstance* m_instance;
         VulkanPhysicalDevice* m_physicalDevice;
+        VmaAllocator m_allocator;
         bool m_enableValidationLayers;
     };
 

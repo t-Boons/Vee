@@ -7,6 +7,7 @@
 #include "platform/vulkan/vulkan_swapchain.hpp"
 #include "platform/vulkan/vulkan_shader.hpp"
 #include "platform/vulkan/vulkan_pipeline.hpp"
+#include "platform/vulkan/vulkan_buffer.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -48,22 +49,6 @@ using namespace std;
 		}
 
 	};
-
-// Taken from https://vulkan-tutorial.com/
-uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
-{
-	VkPhysicalDeviceMemoryProperties memProperties;
-	vkGetPhysicalDeviceMemoryProperties(vee::VKDevice()->GetPhysicalDevice()->GetVKPhysicalDevice(), &memProperties);
-
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-	{
-		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
-			return i;
-		}
-	}
-	return 0;
-}
 
 int main()
 {
@@ -148,37 +133,15 @@ int main()
     VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore));
     VKValidate(vkCreateFence(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &fenceInfo, nullptr, &inFlightFence));
 
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(Vertex) * vertices.size();
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	vee::BufferProperties bufferInfo{};
+	bufferInfo.Size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.Usage = vee::BufferUsage::Vertex;
 
-	VkBuffer vertexBuffer;
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(Vertex) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	vee::VulkanBuffer* vertexBuffer = new vee::VulkanBuffer(bufferInfo);
 
-    VKValidate(vkCreateBuffer(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &bufferInfo, nullptr, &vertexBuffer));
-
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBuffer, &memRequirements);
-
-	VkMemoryAllocateInfo memAllocInfo{};
-	memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memAllocInfo.allocationSize = memRequirements.size;
-	memAllocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	VkDeviceMemory vertexBufferMemory;
-	vkAllocateMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &memAllocInfo, nullptr, &vertexBufferMemory);
-	vkBindBufferMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBuffer, vertexBufferMemory, 0);
-
-	void* data;
-	vkMapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-	memcpy(data, vertices.data(), static_cast<uint64_t>(bufferInfo.size));
-	vkUnmapMemory(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), vertexBufferMemory);
-
+	void* data = vertexBuffer->Map();
+	memcpy(data, vertices.data(), static_cast<uint64_t>(bufferInfo.Size));
+	vertexBuffer->UnMap();
 
 	while (!window->ShouldClose())
 	{
@@ -228,9 +191,9 @@ int main()
 		scissor.extent = {1280, 720};
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		VkBuffer vertexBuffers[] = {vertexBuffer};
+		VkBuffer vertexBuffers[] = {vertexBuffer->GetVKBuffer()};
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &offset);
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, &offset);
 
 		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 

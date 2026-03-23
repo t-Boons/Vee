@@ -8,7 +8,9 @@ namespace vee
     {
         Vertex,
         Index,
-        Uniform
+        Uniform,
+        TransferSrc,
+        TransferDst
     };
 
     enum class MemoryType
