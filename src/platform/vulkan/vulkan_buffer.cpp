@@ -102,11 +102,36 @@ namespace vee
             void* stagingBufferData = stagingBuffer->Map();
             memcpy(stagingBufferData, data, size);
             stagingBuffer->UnMap();
+            // TODO fix.
+
+            VkCommandBuffer commandBuffer = VKDevice()->GetLogicalDevice()->GetCommandBuffer(QueueType::Graphics);
+
+            VkCommandBufferBeginInfo beginInfo{};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            vkBeginCommandBuffer(commandBuffer, &beginInfo);
+            
 
             VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = 0;
+            copyRegion.dstOffset = 0;
             copyRegion.size = size;
-            vkCmdCopyBuffer(VKDevice()->GetDeviceName()->(), stagingBuffer->GetVKBuffer(), GetVKBuffer(), 1, &copyRegion);
-            delete stagingBuffer; // TODO fix this sht.
+
+            vkCmdCopyBuffer(commandBuffer, stagingBuffer->GetVKBuffer(), m_buffer, 1, &copyRegion);
+
+            vkEndCommandBuffer(commandBuffer);
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &commandBuffer;
+
+            vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
+            vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
+
+            // Cleanup
+            VKDevice()->GetLogicalDevice()->FreeCommandBuffer(commandBuffer, QueueType::Graphics);
         }
         else
         {

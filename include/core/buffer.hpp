@@ -36,6 +36,7 @@ namespace vee
 
         virtual void* Map() = 0;
         virtual void UnMap() = 0;
+        virtual void Write(void* data, uint32_t size) = 0;
         
     protected:
         BufferProperties m_properties;

@@ -20,9 +20,12 @@ namespace vee
         ~VulkanLogicalDevice();
         VkDevice& GetVKDevice() { return m_device; }
         VkQueue& GetQueue(QueueType type) { return m_queues[type]; }
+        VkCommandBuffer& GetCommandBuffer(QueueType type);
+        void FreeCommandBuffer(const VkCommandBuffer& commandBuffer, QueueType type);
 
     private:
         std::unordered_map<QueueType, VkQueue> m_queues;
+        std::unordered_map<QueueType, VkCommandPool> m_commandPools;
         VkDevice m_device;
     };
 }
