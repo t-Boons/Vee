@@ -95,10 +95,28 @@ int main()
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
+
+
+	VkDescriptorSetLayoutBinding uboLayoutBinding{};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	uboLayoutBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	VkDescriptorSetLayout uboLayout;	
+	vkCreateDescriptorSetLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &layoutInfo, nullptr, &uboLayout);
+
 	vee::VulkanPipelineInfo pipelineInfo{};
 	pipelineInfo.VertexShader = vertexShader;
 	pipelineInfo.FragmentShader = fragmentShader;
 	pipelineInfo.VertexInputInfo = vertexInputInfo;
+	pipelineInfo.DescriptorSetLayouts = {uboLayout};
 
 	vee::VulkanPipeline* pipeline = new vee::VulkanPipeline(pipelineInfo);
 
@@ -110,6 +128,7 @@ int main()
 
 	VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore));
     VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore));
+	
 
 
 	vee::BufferProperties bufferInfo{};
@@ -126,12 +145,51 @@ int main()
 	bufferInfo3.Data = (void*)indices.data();
 	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(bufferInfo3);
 
+
+	vee::BufferProperties bufferInfo2{};
+	bufferInfo2.Size = sizeof(float);
+	bufferInfo2.Usage = vee::BufferUsage::Uniform;
+	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
+	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
+
 	vee::VulkanFence fence(true);
 
 	vee::VulkanCommandList commandList(vee::QueueType::Graphics);
+
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = vee::VKDevice()->GetLogicalDevice()->GetDescriptorPool();
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &uboLayout;
+
+	VkDescriptorSet descriptorSet;
+	vkAllocateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &descriptorSet);
+
+	VkDescriptorBufferInfo uboInfo{};
+	uboInfo.buffer = uniformBuffer->GetVKBuffer();
+	uboInfo.offset = 0;
+	uboInfo.range = sizeof(float);
+
+	VkWriteDescriptorSet descriptorWrite{};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.pBufferInfo = &uboInfo;
+
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &descriptorWrite, 0, nullptr);
+
 	while (!window->ShouldClose())
 	{
 		window->Update();
+
+		// Update uniform buffer with time.
+		void* data = uniformBuffer->Map();
+		float time = sin(glfwGetTime()) * 0.5f + 0.5f;
+		memcpy(data, &time, sizeof(float));
+		uniformBuffer->UnMap();
 
 		fence.Wait();
 		fence.Reset();
@@ -174,7 +232,10 @@ int main()
 		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, 1, vertexBuffers, &offset);
 		
 		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), indexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+		
 		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
 
 		vkCmdEndRenderPass(commandList.GetVKCommandBuffer());
 

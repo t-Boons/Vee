@@ -9,6 +9,7 @@ namespace vee
         RefPtr<VulkanShader> VertexShader;
         RefPtr<VulkanShader> FragmentShader;
         VkPipelineVertexInputStateCreateInfo VertexInputInfo;
+        std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
     };
 
     class VulkanPipeline
@@ -19,6 +20,7 @@ namespace vee
 
             VkPipeline& GetPipeline() { return m_graphicsPipeline; }
             VkRenderPass& GetRenderPass() { return m_renderPass; }
+            VkPipelineLayout& GetPipelineLayout() { return m_pipelineLayout; }
 
         private:
             VkRenderPass m_renderPass;

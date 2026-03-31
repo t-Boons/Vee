@@ -163,11 +163,12 @@ namespace vee
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; 
-        pipelineLayoutInfo.pSetLayouts = nullptr;
+        pipelineLayoutInfo.setLayoutCount = info.DescriptorSetLayouts.size(); 
+        pipelineLayoutInfo.pSetLayouts = info.DescriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
+        
         VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
 
         pipelineInfo.layout = m_pipelineLayout;

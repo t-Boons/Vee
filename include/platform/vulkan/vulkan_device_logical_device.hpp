@@ -9,8 +9,6 @@ namespace vee
     enum class QueueType
     {
         Graphics,
-        Compute,
-        Copy
     };
 
     class VulkanLogicalDevice
@@ -21,10 +19,12 @@ namespace vee
         VkDevice& GetVKDevice() { return m_device; }
         VkQueue& GetQueue(QueueType type) { return m_queues[type]; }
         VkCommandPool& GetCommandPool(QueueType type) {return m_commandPools[type]; }
+        VkDescriptorPool& GetDescriptorPool() { return m_descriptorPool; }
 
     private:
         std::unordered_map<QueueType, VkQueue> m_queues;
         std::unordered_map<QueueType, VkCommandPool> m_commandPools;
         VkDevice m_device;
+        VkDescriptorPool m_descriptorPool;
     };
 }
