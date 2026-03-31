@@ -10,6 +10,8 @@
 #include "platform/vulkan/vulkan_buffer.hpp"
 #include "platform/vulkan/vulkan_fence.hpp"
 #include "platform/vulkan/vulkan_commandlist.hpp"
+#include "platform/vulkan/vulkan_semaphore.hpp"
+#include "platform/vulkan/vulkan_shader_binding.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -96,50 +98,27 @@ int main()
 	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 
-
-	VkDescriptorSetLayoutBinding uboLayoutBinding{};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	uboLayoutBinding.pImmutableSamplers = nullptr;
-
-	VkDescriptorSetLayoutCreateInfo layoutInfo{};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 1;
-	layoutInfo.pBindings = &uboLayoutBinding;
-
-	VkDescriptorSetLayout uboLayout;	
-	vkCreateDescriptorSetLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &layoutInfo, nullptr, &uboLayout);
+	vee::VulkanShaderBinding shaderBinding;
+	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	shaderBinding.CompileLayout();
 
 	vee::VulkanPipelineInfo pipelineInfo{};
 	pipelineInfo.VertexShader = vertexShader;
 	pipelineInfo.FragmentShader = fragmentShader;
 	pipelineInfo.VertexInputInfo = vertexInputInfo;
-	pipelineInfo.DescriptorSetLayouts = {uboLayout};
+	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
 
 	vee::VulkanPipeline* pipeline = new vee::VulkanPipeline(pipelineInfo);
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
-
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore));
-    VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore));
-	
-
-
 	vee::BufferProperties bufferInfo{};
-	bufferInfo.Size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
 	bufferInfo.Usage = vee::BufferUsage::Vertex;
 	bufferInfo.MemoryType = vee::MemoryType::Static;
 	bufferInfo.Data = (void*)vertices.data();
 	vee::VulkanBuffer* vertexBuffer = new vee::VulkanBuffer(bufferInfo);
 
 	vee::BufferProperties bufferInfo3{};
-	bufferInfo3.Size = sizeof(indices[0]) * indices.size();
+	bufferInfo3.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
 	bufferInfo3.Usage = vee::BufferUsage::Index;
 	bufferInfo3.MemoryType = vee::MemoryType::Static;
 	bufferInfo3.Data = (void*)indices.data();
@@ -160,15 +139,10 @@ int main()
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = vee::VKDevice()->GetLogicalDevice()->GetDescriptorPool();
 	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &uboLayout;
+	allocInfo.pSetLayouts = &shaderBinding.GetDescriptorSetLayout();
 
 	VkDescriptorSet descriptorSet;
 	vkAllocateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &descriptorSet);
-
-	VkDescriptorBufferInfo uboInfo{};
-	uboInfo.buffer = uniformBuffer->GetVKBuffer();
-	uboInfo.offset = 0;
-	uboInfo.range = sizeof(float);
 
 	VkWriteDescriptorSet descriptorWrite{};
 	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -177,9 +151,14 @@ int main()
 	descriptorWrite.dstArrayElement = 0;
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.pBufferInfo = &uboInfo;
+	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
+	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
 	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &descriptorWrite, 0, nullptr);
+
+
+	vee::VulkanSemaphore imageAvailableSemaphore;
+	vee::VulkanSemaphore renderFinishedSemaphore;
 
 	while (!window->ShouldClose())
 	{
@@ -187,7 +166,7 @@ int main()
 
 		// Update uniform buffer with time.
 		void* data = uniformBuffer->Map();
-		float time = sin(glfwGetTime()) * 0.5f + 0.5f;
+		float time = sinf((float)glfwGetTime()) * 0.5f + 0.5f;
 		memcpy(data, &time, sizeof(float));
 		uniformBuffer->UnMap();
 
@@ -195,7 +174,7 @@ int main()
 		fence.Reset();
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, imageAvailableSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex);
 		
 		commandList.Reset();
 		commandList.Begin();
@@ -247,7 +226,7 @@ int main()
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
+		submitInfo.pWaitSemaphores = &imageAvailableSemaphore.GetVKSempahore();
 		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.pWaitDstStageMask = waitStages;
 
@@ -255,7 +234,7 @@ int main()
 		submitInfo.pCommandBuffers = &commandList.GetVKCommandBuffer();
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+		submitInfo.pSignalSemaphores = &renderFinishedSemaphore.GetVKSempahore();
 		
 		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, fence.GetVKFence()));
 
@@ -264,7 +243,7 @@ int main()
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
+		presentInfo.pWaitSemaphores = &renderFinishedSemaphore.GetVKSempahore();
 		
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &swapchain->GetVKSwapchain();
@@ -274,8 +253,8 @@ int main()
 	}
 
 	// Cleanup.
-	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), imageAvailableSemaphore, nullptr);
-	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), renderFinishedSemaphore, nullptr);
+	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), imageAvailableSemaphore.GetVKSempahore(), nullptr);
+	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), renderFinishedSemaphore.GetVKSempahore(), nullptr);
 
 	delete swapchain;
 	delete surface;

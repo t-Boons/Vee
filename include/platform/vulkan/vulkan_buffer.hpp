@@ -15,6 +15,7 @@ namespace vee
         virtual void UnMap() override;
 
         VkBuffer GetVKBuffer() const { return m_buffer; } 
+        VkDescriptorBufferInfo GetVKDescriptorBufferInfo() const;
 
     private:
         VkBuffer m_buffer;

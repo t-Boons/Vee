@@ -47,13 +47,13 @@ namespace vee
         {
             VkDescriptorPoolSize poolSize{};
             poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSize.descriptorCount = 1;
+            poolSize.descriptorCount = 4096;
 
             VkDescriptorPoolCreateInfo poolInfo{};
             poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             poolInfo.poolSizeCount = 1;
             poolInfo.pPoolSizes = &poolSize;
-            poolInfo.maxSets = 1;
+            poolInfo.maxSets = 4096;
             
             vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
         }

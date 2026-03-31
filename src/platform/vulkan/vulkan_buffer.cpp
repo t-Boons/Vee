@@ -113,4 +113,13 @@ namespace vee
     {
         vmaUnmapMemory(VKDevice()->GetAllocator(), m_allocation);
     }
+
+    VkDescriptorBufferInfo VulkanBuffer::GetVKDescriptorBufferInfo() const
+    {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = m_buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = m_properties.Size;
+        return bufferInfo;
+    }
 }
