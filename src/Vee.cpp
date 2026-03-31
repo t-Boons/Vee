@@ -13,6 +13,7 @@
 #include "platform/vulkan/vulkan_semaphore.hpp"
 #include "platform/vulkan/vulkan_shader_binding.hpp"
 #include "platform/vulkan/vulkan_attachment_layout.hpp"
+#include "platform/vulkan/vulkan_texture.hpp"
 #include "core/input/input.hpp"
 #include "core/spectator_camera.hpp"
 #include "core/model_loading/model_importer.hpp"
@@ -40,28 +41,68 @@ int main()
 	
     vee::Log::Info("Vulkan selected GPU: %s", vee::VKDevice()->GetDeviceName().c_str());
 
-	vee::RefPtr<vee::ModelImporter> damagedHelmetImporter = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/DamagedHelmet.gltf");
-	damagedHelmetImporter->Load();
-
-	const std::vector<glm::vec3> vertices = damagedHelmetImporter->Meshes()[0]->m_positions[0];
-	const std::vector<uint32_t> indices = damagedHelmetImporter->Meshes()[0]->m_indices[0];
-
 
 	vee::RefPtr<vee::VertexLayout> vertexLayout = vee::MakeRef<vee::VertexLayout>();
 	vertexLayout->m_bindingDescriptions = {
 		{0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // position
 		{1, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // normal
 		{2, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
-		{3, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // tangent
+		{3, sizeof(float) * 4, VK_VERTEX_INPUT_RATE_VERTEX}, // tangent
 		{4, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}	 // bitangent
 	};
 	vertexLayout->m_attributes = {
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
 		{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0 },
 		{ 2, 2, VK_FORMAT_R32G32_SFLOAT,    0 },
-		{ 3, 3, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0 },
 		{ 4, 4, VK_FORMAT_R32G32B32_SFLOAT, 0 } 
 	};
+
+	std::vector<vee::RefPtr<vee::VulkanBuffer>> vertexBuffers;
+
+	vee::RefPtr<vee::ModelImporter> damagedHelmetImporter = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/DamagedHelmet.gltf");
+	damagedHelmetImporter->Load();
+
+	vee::BufferProperties bufferProperties{};
+	bufferProperties.Usage = vee::BufferUsage::Vertex;
+	bufferProperties.MemoryType = vee::MemoryType::Static;
+
+	const std::vector<glm::vec3> vertices = damagedHelmetImporter->Meshes()[0]->m_positions[0];
+	bufferProperties.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
+	bufferProperties.Data = (void*)vertices.data();
+	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+
+
+	const std::vector<glm::vec3> normals = damagedHelmetImporter->Meshes()[0]->m_normals[0];
+	bufferProperties.Size = (uint32_t)sizeof(normals[0]) * (uint32_t)normals.size();
+	bufferProperties.Data = (void*)normals.data();
+	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+
+	const std::vector<glm::vec2> uvs = damagedHelmetImporter->Meshes()[0]->m_texcoords[0];
+	bufferProperties.Size = (uint32_t)sizeof(uvs[0]) * (uint32_t)uvs.size();
+	bufferProperties.Data = (void*)uvs.data();
+	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+
+
+	const std::vector<glm::vec4> tangents = damagedHelmetImporter->Meshes()[0]->m_tangents[0];
+	bufferProperties.Size = (uint32_t)sizeof(tangents[0]) * (uint32_t)tangents.size();
+	bufferProperties.Data = (void*)tangents.data();
+	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+
+	const std::vector<glm::vec3> bitangents = damagedHelmetImporter->Meshes()[0]->m_bitangents[0];
+	bufferProperties.Size = (uint32_t)sizeof(bitangents[0]) * (uint32_t)bitangents.size();
+	bufferProperties.Data = (void*)bitangents.data();
+	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+
+
+	const std::vector<uint32_t> indices = damagedHelmetImporter->Meshes()[0]->m_indices[0];
+	vee::BufferProperties indexBufferProperties{};
+	indexBufferProperties.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
+	indexBufferProperties.Usage = vee::BufferUsage::Index;
+	indexBufferProperties.MemoryType = vee::MemoryType::Static;
+	indexBufferProperties.Data = (void*)indices.data();
+	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(indexBufferProperties);
+
 
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -74,23 +115,6 @@ int main()
 	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
 
 	vee::RefPtr<vee::VulkanPipeline> pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
-
-
-
-
-	vee::BufferProperties bufferInfo{};
-	bufferInfo.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
-	bufferInfo.Usage = vee::BufferUsage::Vertex;
-	bufferInfo.MemoryType = vee::MemoryType::Static;
-	bufferInfo.Data = (void*)vertices.data();
-	vee::VulkanBuffer* vertexBuffer = new vee::VulkanBuffer(bufferInfo);
-
-	vee::BufferProperties bufferInfo3{};
-	bufferInfo3.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
-	bufferInfo3.Usage = vee::BufferUsage::Index;
-	bufferInfo3.MemoryType = vee::MemoryType::Static;
-	bufferInfo3.Data = (void*)indices.data();
-	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(bufferInfo3);
 
 
 	vee::BufferProperties bufferInfo2{};
@@ -150,10 +174,12 @@ int main()
 		{
 			glm::mat4 viewProjection;
 			glm::mat4 model;
+			glm::mat3 normalMatrix;
 		} ubo;
 		
 		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
 		ubo.viewProjection = camera.GetCamera()->ViewProjectionMatrix();
+		ubo.normalMatrix = glm::mat3(glm::transpose(glm::inverse(ubo.model)));
 		
 		memcpy(data, &ubo, sizeof(ubo));
 		uniformBuffer->UnMap();
@@ -194,9 +220,14 @@ int main()
 		scissor.extent = {1280, 720};
 		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
 
-		VkBuffer vertexBuffers[] = {vertexBuffer->GetVKBuffer()};
-		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, 1, vertexBuffers, &offset);
+		std::array<VkBuffer, 5> vertexBuffersArray;
+		for (size_t i = 0; i < vertexBuffers.size(); i++)
+		{
+			vertexBuffersArray[i] = vertexBuffers[i]->GetVKBuffer();
+		}
+		
+		std::array<VkDeviceSize, 5> offsets = { 0, 0, 0, 0, 0 };
+		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, vertexBuffersArray.size(), vertexBuffersArray.data(), offsets.data());
 		
 		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), indexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
@@ -242,5 +273,4 @@ int main()
 
 	delete swapchain;
 	delete surface;
-	delete vertexBuffer;
 }

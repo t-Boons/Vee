@@ -1,19 +1,39 @@
 #version 450
 
-layout(location = 0) in vec3 inPosition;
+layout(location = 0) in vec3 vertices;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec2 texCoords;
+layout(location = 3) in vec4 tangents;
+layout(location = 4) in vec3 bitangents;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec2 outTexCoords;
+layout(location = 2) out vec4 outTangent;
+layout(location = 3) out vec3 outBitangent;
+layout(location = 4) out vec3 outFragPos;
 
 layout(set = 0, binding = 0) uniform UniformBuffer
 {
-    mat4 vp;
-    mat4 m;
+    mat4 viewProjection;
+    mat4 model;
+    mat3 normalMatrix;
 } ubo;
 
 void main()
 {
-    vec4 pos = vec4(inPosition, 1.0);
-    gl_Position = ubo.vp * ubo.m * pos;
+    mat4 mvp = ubo.viewProjection * ubo.model;
 
-    fragColor = vec3(1.0f, 1.0f, 0.0f);
+    vec4 worldPos = ubo.model * vec4(vertices, 1.0);
+
+    outFragPos = worldPos.xyz;
+    outTexCoords = texCoords;
+
+    outNormal = normalize(ubo.normalMatrix * normals);
+
+    vec3 T = normalize(mat3(ubo.model) * tangents.xyz);
+    outTangent = vec4(T, tangents.w);
+
+    outBitangent = normalize(ubo.normalMatrix * bitangents);
+
+    gl_Position = mvp * vec4(vertices, 1.0);
 }
