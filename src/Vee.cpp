@@ -18,34 +18,8 @@
 #include "core/model_loading/model_importer.hpp"
 #include "glm/glm.hpp"
 
+
 using namespace std;
-
-	// Taken from https://vulkan-tutorial.com/
-	struct Vertex
-	{
-		static VkVertexInputBindingDescription getBindingDescription()
-		{
-			VkVertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(glm::vec3);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-			return bindingDescription;
-		}
-
-		static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions()
-		{
-			std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
-
-			VkVertexInputAttributeDescription posAttributeDescription{};
-			posAttributeDescription.binding = 0;
-			posAttributeDescription.location = 0;
-			posAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-			posAttributeDescription.offset = 0;
-			attributeDescriptions[0] = posAttributeDescription;
-			return attributeDescriptions;
-		}
-
-	};
 
 int main()
 {
@@ -66,10 +40,6 @@ int main()
 	
     vee::Log::Info("Vulkan selected GPU: %s", vee::VKDevice()->GetDeviceName().c_str());
 
-
-	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
 	vee::RefPtr<vee::ModelImporter> damagedHelmetImporter = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/DamagedHelmet.gltf");
 	damagedHelmetImporter->Load();
 
@@ -77,14 +47,21 @@ int main()
 	const std::vector<uint32_t> indices = damagedHelmetImporter->Meshes()[0]->m_indices[0];
 
 
-	auto bindingDescription = Vertex::getBindingDescription();
-	auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
+	vee::RefPtr<vee::VertexLayout> vertexLayout = vee::MakeRef<vee::VertexLayout>();
+	vertexLayout->m_bindingDescriptions = {
+		{0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // position
+		{1, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // normal
+		{2, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
+		{3, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // tangent
+		{4, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}	 // bitangent
+	};
+	vertexLayout->m_attributes = {
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 2, 2, VK_FORMAT_R32G32_SFLOAT,    0 },
+		{ 3, 3, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 4, 4, VK_FORMAT_R32G32B32_SFLOAT, 0 } 
+	};
 
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
@@ -93,10 +70,10 @@ int main()
 	vee::VulkanPipelineInfo pipelineInfo{};
 	pipelineInfo.VertexShader = vertexShader;
 	pipelineInfo.FragmentShader = fragmentShader;
-	pipelineInfo.VertexInputInfo = vertexInputInfo;
+	pipelineInfo.VertexInputInfo = vertexLayout;
 	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
 
-	vee::RefPtr<vee::VulkanPipeline> pipeline = MakeRef<vee::VulkanPipeline>(pipelineInfo);
+	vee::RefPtr<vee::VulkanPipeline> pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
 
 
 
