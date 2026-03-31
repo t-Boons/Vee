@@ -1,5 +1,6 @@
 #include "platform/vulkan/vulkan_buffer.hpp"
 #include "platform/vulkan/vulkan_device.hpp"
+#include "platform/vulkan/vulkan_commandlist.hpp"
 
 namespace vee
 {
@@ -104,13 +105,13 @@ namespace vee
             stagingBuffer->UnMap();
             // TODO fix.
 
-            VkCommandBuffer commandBuffer = VKDevice()->GetLogicalDevice()->GetCommandBuffer(QueueType::Graphics);
+            VulkanCommandList list(QueueType::Graphics);
 
             VkCommandBufferBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-            vkBeginCommandBuffer(commandBuffer, &beginInfo);
+            vkBeginCommandBuffer(list.GetVKCommandBuffer(), &beginInfo);
             
 
             VkBufferCopy copyRegion{};
@@ -118,20 +119,17 @@ namespace vee
             copyRegion.dstOffset = 0;
             copyRegion.size = size;
 
-            vkCmdCopyBuffer(commandBuffer, stagingBuffer->GetVKBuffer(), m_buffer, 1, &copyRegion);
+            vkCmdCopyBuffer(list.GetVKCommandBuffer(), stagingBuffer->GetVKBuffer(), m_buffer, 1, &copyRegion);
 
-            vkEndCommandBuffer(commandBuffer);
+            vkEndCommandBuffer(list.GetVKCommandBuffer());
 
             VkSubmitInfo submitInfo{};
             submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &commandBuffer;
+            submitInfo.pCommandBuffers = &list.GetVKCommandBuffer();
 
             vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
             vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
-
-            // Cleanup
-            VKDevice()->GetLogicalDevice()->FreeCommandBuffer(commandBuffer, QueueType::Graphics);
         }
         else
         {
