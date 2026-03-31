@@ -40,5 +40,6 @@ vec3 MapNormal(vec3 texNormal, vec3 T, vec3 B, vec3 N, float scale)
 
 void main()
 {
-    outColor = vec4(inTexCoords.x, inTexCoords.y, 0.0f, 1.0f);
+    vec3 texColor = vec3(inTexCoords.x, inTexCoords.y, 0.0f);
+    outColor = vec4(texColor, 1.0f);
 }

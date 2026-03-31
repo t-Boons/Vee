@@ -106,7 +106,15 @@ int main()
 
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.CompileLayout();
+
+	vee::TextureProperties textureProperties{};
+	textureProperties.Width = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_width;
+	textureProperties.Height = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_height;
+	textureProperties.NumChannels = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_channels;
+	textureProperties.Data = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_image.data();
+	vee::VulkanTexture albedoTexture(textureProperties);
 
 	vee::VulkanPipelineInfo pipelineInfo{};
 	pipelineInfo.VertexShader = vertexShader;
@@ -116,9 +124,15 @@ int main()
 
 	vee::RefPtr<vee::VulkanPipeline> pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
 
+	struct UnitormBufferObject
+	{
+		glm::mat4 viewProjection;
+		glm::mat4 model;
+		glm::mat3 normalMatrix;
+	};
 
 	vee::BufferProperties bufferInfo2{};
-	bufferInfo2.Size = sizeof(glm::mat4) * 2;
+	bufferInfo2.Size = sizeof(UnitormBufferObject);
 	bufferInfo2.Usage = vee::BufferUsage::Uniform;
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
@@ -146,7 +160,47 @@ int main()
 	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
 	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
-	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &descriptorWrite, 0, nullptr);
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = 16;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 0.0f;
+	VkSampler sampler;
+	VKValidate(vkCreateSampler(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &samplerInfo, nullptr, &sampler));
+
+
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = albedoTexture.GetImageView();
+	imageInfo.sampler = sampler;
+
+	VkWriteDescriptorSet descriptorWriteTexture{};
+	descriptorWriteTexture.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWriteTexture.dstSet = descriptorSet;
+	descriptorWriteTexture.dstBinding = 1; // binding 1 for combined image sampler
+	descriptorWriteTexture.dstArrayElement = 0;
+	descriptorWriteTexture.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWriteTexture.descriptorCount = 1;
+	descriptorWriteTexture.pImageInfo = &imageInfo;
+
+	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {descriptorWrite, descriptorWriteTexture};
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(),
+						static_cast<uint32_t>(descriptorWrites.size()),
+						descriptorWrites.data(),
+						0,
+						nullptr);
 
 
 	vee::VulkanSemaphore imageAvailableSemaphore;
@@ -170,12 +224,7 @@ int main()
 		
 		void* data = uniformBuffer->Map();
 		
-		struct UnitormBufferObject
-		{
-			glm::mat4 viewProjection;
-			glm::mat4 model;
-			glm::mat3 normalMatrix;
-		} ubo;
+		UnitormBufferObject ubo;
 		
 		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
 		ubo.viewProjection = camera.GetCamera()->ViewProjectionMatrix();
