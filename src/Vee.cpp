@@ -12,6 +12,7 @@
 #include "platform/vulkan/vulkan_commandlist.hpp"
 #include "platform/vulkan/vulkan_semaphore.hpp"
 #include "platform/vulkan/vulkan_shader_binding.hpp"
+#include "platform/vulkan/vulkan_attachment_layout.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -108,7 +109,7 @@ int main()
 	pipelineInfo.VertexInputInfo = vertexInputInfo;
 	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
 
-	vee::VulkanPipeline* pipeline = new vee::VulkanPipeline(pipelineInfo);
+	vee::RefPtr<vee::VulkanPipeline> pipeline = MakeRef<vee::VulkanPipeline>(pipelineInfo);
 
 	vee::BufferProperties bufferInfo{};
 	bufferInfo.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
@@ -179,17 +180,14 @@ int main()
 		commandList.Reset();
 		commandList.Begin();
 
-		VkRenderPassBeginInfo renderPassBeginInfo{};
-		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBeginInfo.renderPass = pipeline->GetRenderPass();
-		renderPassBeginInfo.framebuffer = swapchain->GetSwapchainFrameBufferFromIndex(imageIndex);
-		renderPassBeginInfo.renderArea.offset = {0, 0};
-		renderPassBeginInfo.renderArea.extent = {1280, 720};
-		VkClearValue clearColor = {{{0.02f, 0.02f, 0.07f, 1.0f}}};
-		renderPassBeginInfo.clearValueCount = 1;
-		renderPassBeginInfo.pClearValues = &clearColor;
 
-		vkCmdBeginRenderPass(commandList.GetVKCommandBuffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vee::RenderPassInfo renderPassInfo{};
+		renderPassInfo.ClearColor = glm::vec4(0.1f, 0.1f, 0.5f, 1.0f);
+		renderPassInfo.RenderTarget = swapchain->GetSwapchainFrameBufferFromIndex(imageIndex);
+		renderPassInfo.Pipeline = pipeline;
+		renderPassInfo.AttachmentLayout = vee::VulkanAttachmentLayout::GetDefaultColorAttachment();
+		commandList.BeginRenderPass(renderPassInfo);
+
 		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 
 		VkViewport viewport{};
@@ -216,7 +214,7 @@ int main()
 		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 
-		vkCmdEndRenderPass(commandList.GetVKCommandBuffer());
+		commandList.EndRenderPass();
 
 		commandList.End();
 
@@ -251,13 +249,8 @@ int main()
 		presentInfo.pResults = nullptr;
 		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
 	}
-
-	// Cleanup.
-	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), imageAvailableSemaphore.GetVKSempahore(), nullptr);
-	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), renderFinishedSemaphore.GetVKSempahore(), nullptr);
-
+	
 	delete swapchain;
 	delete surface;
-	delete pipeline;
 	delete vertexBuffer;
 }

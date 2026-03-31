@@ -26,7 +26,7 @@ namespace vee
 
     void VulkanShaderBinding::CompileLayout()
     {
-        Check(!m_bindings.empty(), "No bindings added to shader binding");
+        CheckMsg(!m_bindings.empty(), "No bindings added to shader binding");
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

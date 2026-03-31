@@ -2,9 +2,12 @@
 
 project(Vee LANGUAGES CXX)
 
-file(GLOB_RECURSE VEE "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/lib/imgui/*.hpp")
+file(GLOB_RECURSE VEE   "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
+                        "${CMAKE_CURRENT_LIST_DIR}/lib/imgui/*.hpp"
+                        "${CMAKE_CURRENT_LIST_DIR}/lib/tinygltf/*.h"
+)
 
-add_executable(${PROJECT_NAME} ${VEE} ${IMGUI})
+add_executable(${PROJECT_NAME} ${VEE})
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
 
@@ -25,6 +28,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE GPUOpen::VulkanMemoryAllocator)
 add_subdirectory(lib/VulkanMemoryAllocator)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/mikktspace)
+target_link_libraries(${PROJECT_NAME} PRIVATE mikktspace)
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/mikktspace")
 
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/VulkanMemoryAllocator/include")
 

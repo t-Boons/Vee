@@ -1,5 +1,6 @@
 #include "platform/vulkan/vulkan_pipeline.hpp"
 #include "platform/vulkan/vulkan_device.hpp"
+#include "platform/vulkan/vulkan_attachment_layout.hpp"
 
 namespace vee
 {
@@ -90,20 +91,6 @@ namespace vee
         return dynamicState;
     }
 
-    VkAttachmentDescription CreateDefaultColorAttachment()
-    {
-    	VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = VK_FORMAT_B8G8R8A8_SRGB;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        return colorAttachment;
-    }
-
     VkPipelineInputAssemblyStateCreateInfo CreateDefaultInputAssembly()
     {
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -143,24 +130,6 @@ namespace vee
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
 
-        VkAttachmentDescription colorAttachment = CreateDefaultColorAttachment();
-    
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &colorAttachment;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = info.DescriptorSetLayouts.size(); 
@@ -172,17 +141,13 @@ namespace vee
         VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
 
         pipelineInfo.layout = m_pipelineLayout;
-
-        VKValidate(vkCreateRenderPass(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &renderPassInfo, nullptr, &m_renderPass));
-
-        pipelineInfo.renderPass = m_renderPass;
+        pipelineInfo.renderPass =  VulkanAttachmentLayout::GetDefaultColorAttachment()->GetRenderPass();
 
 	    VKValidate(vkCreateGraphicsPipelines(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline));
     }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        vkDestroyRenderPass(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), m_renderPass, nullptr);
         vkDestroyPipeline(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), m_graphicsPipeline, nullptr);
     }
 }

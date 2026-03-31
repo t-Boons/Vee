@@ -39,4 +39,30 @@ namespace vee
     {
         VKValidate(vkEndCommandBuffer(m_commandBuffer));
     }
+
+    void VulkanCommandList::BeginRenderPass(const RenderPassInfo& info)
+    {
+        VkRenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass = info.AttachmentLayout->GetRenderPass();
+        renderPassBeginInfo.framebuffer = info.RenderTarget;
+        renderPassBeginInfo.renderArea.offset = {0, 0};
+        renderPassBeginInfo.renderArea.extent = {1280, 720};
+
+        VkClearValue clearColor = {};
+        clearColor.color.float32[0] = info.ClearColor.r;
+        clearColor.color.float32[1] = info.ClearColor.g;
+        clearColor.color.float32[2] = info.ClearColor.b;
+        clearColor.color.float32[3] = info.ClearColor.a;
+
+        renderPassBeginInfo.clearValueCount = 1;
+        renderPassBeginInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void VulkanCommandList::EndRenderPass()
+    {
+        vkCmdEndRenderPass(m_commandBuffer);
+    }
 }
