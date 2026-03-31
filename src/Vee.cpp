@@ -13,6 +13,7 @@
 #include "platform/vulkan/vulkan_semaphore.hpp"
 #include "platform/vulkan/vulkan_shader_binding.hpp"
 #include "platform/vulkan/vulkan_attachment_layout.hpp"
+#include "core/input/input.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -161,13 +162,16 @@ int main()
 	vee::VulkanSemaphore imageAvailableSemaphore;
 	vee::VulkanSemaphore renderFinishedSemaphore;
 
+	vee::Input input;
+	input.Init(window);
+
 	while (!window->ShouldClose())
 	{
 		window->Update();
 
 		// Update uniform buffer with time.
 		void* data = uniformBuffer->Map();
-		float time = sinf((float)glfwGetTime()) * 0.5f + 0.5f;
+		float time = input.MouseX() / 1280.0f;
 		memcpy(data, &time, sizeof(float));
 		uniformBuffer->UnMap();
 
@@ -249,7 +253,7 @@ int main()
 		presentInfo.pResults = nullptr;
 		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
 	}
-	
+
 	delete swapchain;
 	delete surface;
 	delete vertexBuffer;
