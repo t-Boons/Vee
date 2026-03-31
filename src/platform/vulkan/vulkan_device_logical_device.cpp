@@ -6,11 +6,6 @@ namespace vee
     {
         vkDestroyDevice(m_device, nullptr);
     }
-    
-    void VulkanLogicalDevice::FreeCommandBuffer(const VkCommandBuffer &commandBuffer, QueueType type)
-    {
-        vkFreeCommandBuffers(m_device, m_commandPools[type], 1, &commandBuffer);
-    }
 
     VulkanLogicalDevice::VulkanLogicalDevice(VulkanPhysicalDevice *physicalDevice)
     {

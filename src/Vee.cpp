@@ -8,6 +8,8 @@
 #include "platform/vulkan/vulkan_shader.hpp"
 #include "platform/vulkan/vulkan_pipeline.hpp"
 #include "platform/vulkan/vulkan_buffer.hpp"
+#include "platform/vulkan/vulkan_fence.hpp"
+#include "platform/vulkan/vulkan_commandlist.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -75,12 +77,15 @@ int main()
 
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
 	const std::vector<Vertex> vertices = {
     {{ 0.0f, -0.5f }, {1.0f, 0.0f, 0.0f}},
     {{ 0.5f,  0.5f }, {0.0f, 1.0f, 1.0f}},
     {{-0.5f,  0.5f }, {0.0f, 0.0f, 1.0f}},
 	};
+
+	const std::vector<uint32_t> indices = {1, 2, 0};
 
 	auto bindingDescription = Vertex::getBindingDescription();
 	auto attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -97,72 +102,45 @@ int main()
 
 	vee::VulkanPipeline* pipeline = new vee::VulkanPipeline(pipelineInfo);
 
-
-	// Taken from https://vulkan-tutorial.com/
-	VkCommandPoolCreateInfo poolInfo{};
-	poolInfo.queueFamilyIndex = 0;
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	VkCommandPool commandPool;
-	VKValidate(vkCreateCommandPool(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &poolInfo, nullptr, &commandPool));
-
-	VkCommandBuffer commandBuffer;
-
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
-
-	VKValidate(vkAllocateCommandBuffers(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &commandBuffer));
-
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
-	VkFence inFlightFence;
-
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	VkFenceCreateInfo fenceInfo{};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
 	VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore));
     VKValidate(vkCreateSemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore));
-    VKValidate(vkCreateFence(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &fenceInfo, nullptr, &inFlightFence));
+
 
 	vee::BufferProperties bufferInfo{};
 	bufferInfo.Size = sizeof(vertices[0]) * vertices.size();
 	bufferInfo.Usage = vee::BufferUsage::Vertex;
-
+	bufferInfo.MemoryType = vee::MemoryType::Static;
+	bufferInfo.Data = (void*)vertices.data();
 	vee::VulkanBuffer* vertexBuffer = new vee::VulkanBuffer(bufferInfo);
 
-	void* data = vertexBuffer->Map();
-	memcpy(data, vertices.data(), static_cast<uint64_t>(bufferInfo.Size));
-	vertexBuffer->UnMap();
+	vee::BufferProperties bufferInfo3{};
+	bufferInfo3.Size = sizeof(indices[0]) * indices.size();
+	bufferInfo3.Usage = vee::BufferUsage::Index;
+	bufferInfo3.MemoryType = vee::MemoryType::Static;
+	bufferInfo3.Data = (void*)indices.data();
+	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(bufferInfo3);
 
+	vee::VulkanFence fence(true);
+
+	vee::VulkanCommandList commandList(vee::QueueType::Graphics);
 	while (!window->ShouldClose())
 	{
 		window->Update();
 
-		vkWaitForFences(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &inFlightFence);
-		
+		fence.Wait();
+		fence.Reset();
+
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 		
-		
-		// Record command buffer.
-		vkResetCommandBuffer(commandBuffer, 0);
-
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = 0;
-		beginInfo.pInheritanceInfo = nullptr;
-
-		VKValidate(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+		commandList.Reset();
+		commandList.Begin();
 
 		VkRenderPassBeginInfo renderPassBeginInfo{};
 		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -174,8 +152,8 @@ int main()
 		renderPassBeginInfo.clearValueCount = 1;
 		renderPassBeginInfo.pClearValues = &clearColor;
 
-		vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
+		vkCmdBeginRenderPass(commandList.GetVKCommandBuffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -184,22 +162,23 @@ int main()
 		viewport.height = 720.0f;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetViewport(commandList.GetVKCommandBuffer(), 0, 1, &viewport);
 
 		VkRect2D scissor{};
 		scissor.offset = {0, 0};
 		scissor.extent = {1280, 720};
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
 
 		VkBuffer vertexBuffers[] = {vertexBuffer->GetVKBuffer()};
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, &offset);
+		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, 1, vertexBuffers, &offset);
+		
+		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), indexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+		vkCmdEndRenderPass(commandList.GetVKCommandBuffer());
 
-		vkCmdEndRenderPass(commandBuffer);
-		VKValidate(vkEndCommandBuffer(commandBuffer));
-		// End recording command buffer.
+		commandList.End();
 
 
 
@@ -212,12 +191,12 @@ int main()
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
+		submitInfo.pCommandBuffers = &commandList.GetVKCommandBuffer();
 
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
 		
-		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, inFlightFence));
+		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, fence.GetVKFence()));
 
 
 		VkPresentInfoKHR presentInfo{};
@@ -234,11 +213,11 @@ int main()
 	}
 
 	// Cleanup.
-	vkDestroyFence(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), inFlightFence, nullptr);
 	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), renderFinishedSemaphore, nullptr);
 
 	delete swapchain;
 	delete surface;
 	delete pipeline;
+	delete vertexBuffer;
 }

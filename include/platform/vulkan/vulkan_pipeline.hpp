@@ -24,5 +24,6 @@ namespace vee
             VkRenderPass m_renderPass;
             VkPipeline m_graphicsPipeline;
             VulkanPipelineInfo m_info;
+            VkPipelineLayout m_pipelineLayout;
     };
 }

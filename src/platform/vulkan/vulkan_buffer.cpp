@@ -6,22 +6,6 @@ namespace vee
 {
     namespace utils
     {
-        // Taken from https://vulkan-tutorial.com/
-        uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
-        {
-            VkPhysicalDeviceMemoryProperties memProperties;
-            vkGetPhysicalDeviceMemoryProperties(vee::VKDevice()->GetPhysicalDevice()->GetVKPhysicalDevice(), &memProperties);
-
-            for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-            {
-                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-                {
-                    return i;
-                }
-            }
-            return 0;
-        }
-
         inline VkMemoryPropertyFlags GetVulkanMemoryPropertyFlags(MemoryType type)
         {
             switch (type)
@@ -35,14 +19,14 @@ namespace vee
             }
         }
 
-        inline VkBufferUsageFlagBits GetVulkanBufferUsageFlagBits(BufferUsage usage)
+        inline VkBufferUsageFlags GetVulkanBufferUsageFlagBits(BufferUsage usage)
         {
             switch (usage)
             {
                 case BufferUsage::Vertex:
-                    return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                    return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 case BufferUsage::Index:
-                    return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                    return VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 case BufferUsage::Uniform:
                     return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
                 case BufferUsage::TransferSrc:
@@ -66,8 +50,49 @@ namespace vee
 
     VmaAllocationCreateInfo allocInfo = {};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.preferredFlags = utils::GetVulkanMemoryPropertyFlags(properties.MemoryType);
+    allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
     VKValidate(vmaCreateBuffer(VKDevice()->GetAllocator(), &bufferInfo, &allocInfo, &m_buffer, &m_allocation, nullptr));
+
+    // If GPU only create a staging buffer to upload data.
+    if (m_properties.MemoryType == MemoryType::Static)
+    {
+        CheckMsg(m_properties.Data != nullptr, "Static buffers must have initial data. (BufferProperties.Data cannot be null)");
+
+        BufferProperties stagingBufferProperties = m_properties;
+        stagingBufferProperties.MemoryType = MemoryType::Dynamic;
+        stagingBufferProperties.Usage = BufferUsage::TransferSrc;
+        VulkanBuffer *stagingBuffer = new VulkanBuffer(stagingBufferProperties);
+        void *stagingBufferData = stagingBuffer->Map();
+        memcpy(stagingBufferData, m_properties.Data, m_properties.Size);
+        stagingBuffer->UnMap();
+
+        VulkanCommandList list(QueueType::Graphics);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(list.GetVKCommandBuffer(), &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = properties.Size;
+
+        vkCmdCopyBuffer(list.GetVKCommandBuffer(), stagingBuffer->GetVKBuffer(), m_buffer, 1, &copyRegion);
+
+        vkEndCommandBuffer(list.GetVKCommandBuffer());
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &list.GetVKCommandBuffer();
+
+        vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
+    }
 }
 
     VulkanBuffer::~VulkanBuffer()
@@ -87,55 +112,5 @@ namespace vee
     void VulkanBuffer::UnMap()
     {
         vmaUnmapMemory(VKDevice()->GetAllocator(), m_allocation);
-    }
-
-    void VulkanBuffer::Write(void* data, uint32_t size)
-    {
-        Check(size <= m_properties.Size && "Data size exceeds buffer size.");
-
-                // If GPU only create a staging buffer to upload data.
-        if (m_properties.MemoryType == MemoryType::Static)
-        {
-            BufferProperties stagingBufferProperties = m_properties;
-            stagingBufferProperties.MemoryType = MemoryType::Dynamic;
-            stagingBufferProperties.Usage = BufferUsage::TransferSrc;
-            VulkanBuffer* stagingBuffer = new VulkanBuffer(stagingBufferProperties);
-            void* stagingBufferData = stagingBuffer->Map();
-            memcpy(stagingBufferData, data, size);
-            stagingBuffer->UnMap();
-            // TODO fix.
-
-            VulkanCommandList list(QueueType::Graphics);
-
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-            vkBeginCommandBuffer(list.GetVKCommandBuffer(), &beginInfo);
-            
-
-            VkBufferCopy copyRegion{};
-            copyRegion.srcOffset = 0;
-            copyRegion.dstOffset = 0;
-            copyRegion.size = size;
-
-            vkCmdCopyBuffer(list.GetVKCommandBuffer(), stagingBuffer->GetVKBuffer(), m_buffer, 1, &copyRegion);
-
-            vkEndCommandBuffer(list.GetVKCommandBuffer());
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &list.GetVKCommandBuffer();
-
-            vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
-            vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
-        }
-        else
-        {
-            void* mappedData = Map();
-            memcpy(mappedData, data, size);
-            UnMap();
-        }
     }
 }

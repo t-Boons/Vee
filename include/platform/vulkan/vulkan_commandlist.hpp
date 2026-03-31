@@ -10,9 +10,16 @@ namespace vee
     public:
         VulkanCommandList(QueueType type);
         ~VulkanCommandList();
-        VkCommandBuffer& GetVKCommandBuffer() { return commandBuffer; }
+
+        void Reset();
+
+        void Begin();
+        void End();
+
+
+        VkCommandBuffer& GetVKCommandBuffer() { return m_commandBuffer; }
     private:
-        VkCommandBuffer commandBuffer;
+        VkCommandBuffer m_commandBuffer;
         QueueType m_type;
-    }
+    };
 }

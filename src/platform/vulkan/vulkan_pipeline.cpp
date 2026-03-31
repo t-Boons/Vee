@@ -161,6 +161,17 @@ namespace vee
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
 
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 0; 
+        pipelineLayoutInfo.pSetLayouts = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+        VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
+
+        pipelineInfo.layout = m_pipelineLayout;
+
         VKValidate(vkCreateRenderPass(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &renderPassInfo, nullptr, &m_renderPass));
 
         pipelineInfo.renderPass = m_renderPass;

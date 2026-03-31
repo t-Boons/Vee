@@ -13,7 +13,6 @@ namespace vee
 
         virtual void* Map() override;
         virtual void UnMap() override;
-        virtual void Write(void* data, uint32_t size) override;
 
         VkBuffer GetVKBuffer() const { return m_buffer; } 
 
