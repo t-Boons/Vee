@@ -14,6 +14,8 @@
 #include "platform/vulkan/vulkan_shader_binding.hpp"
 #include "platform/vulkan/vulkan_attachment_layout.hpp"
 #include "core/input/input.hpp"
+#include "core/spectator_camera.hpp"
+#include "core/model_loading/model_importer.hpp"
 #include "glm/glm.hpp"
 
 using namespace std;
@@ -21,36 +23,25 @@ using namespace std;
 	// Taken from https://vulkan-tutorial.com/
 	struct Vertex
 	{
-		glm::vec2 pos;
-		glm::vec3 color;
-
 		static VkVertexInputBindingDescription getBindingDescription()
 		{
 			VkVertexInputBindingDescription bindingDescription{};
 			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
+			bindingDescription.stride = sizeof(glm::vec3);
 			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 			return bindingDescription;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+		static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+			std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
 
 			VkVertexInputAttributeDescription posAttributeDescription{};
 			posAttributeDescription.binding = 0;
 			posAttributeDescription.location = 0;
-			posAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-			posAttributeDescription.offset = offsetof(Vertex, pos);
+			posAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			posAttributeDescription.offset = 0;
 			attributeDescriptions[0] = posAttributeDescription;
-
-			VkVertexInputAttributeDescription colorAttributeDescription{};
-			colorAttributeDescription.binding = 0;
-			colorAttributeDescription.location = 1;
-			colorAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-			colorAttributeDescription.offset = offsetof(Vertex, color);
-			attributeDescriptions[1] = colorAttributeDescription;
-
 			return attributeDescriptions;
 		}
 
@@ -76,20 +67,15 @@ int main()
     vee::Log::Info("Vulkan selected GPU: %s", vee::VKDevice()->GetDeviceName().c_str());
 
 
-
-
-
-
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-	const std::vector<Vertex> vertices = {
-    {{ 0.0f, -0.5f }, {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f,  0.5f }, {0.0f, 1.0f, 1.0f}},
-    {{-0.5f,  0.5f }, {0.0f, 0.0f, 1.0f}},
-	};
+	vee::RefPtr<vee::ModelImporter> damagedHelmetImporter = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/DamagedHelmet.gltf");
+	damagedHelmetImporter->Load();
 
-	const std::vector<uint32_t> indices = {1, 2, 0};
+	const std::vector<glm::vec3> vertices = damagedHelmetImporter->Meshes()[0]->m_positions[0];
+	const std::vector<uint32_t> indices = damagedHelmetImporter->Meshes()[0]->m_indices[0];
+
 
 	auto bindingDescription = Vertex::getBindingDescription();
 	auto attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -112,6 +98,9 @@ int main()
 
 	vee::RefPtr<vee::VulkanPipeline> pipeline = MakeRef<vee::VulkanPipeline>(pipelineInfo);
 
+
+
+
 	vee::BufferProperties bufferInfo{};
 	bufferInfo.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
 	bufferInfo.Usage = vee::BufferUsage::Vertex;
@@ -128,7 +117,7 @@ int main()
 
 
 	vee::BufferProperties bufferInfo2{};
-	bufferInfo2.Size = sizeof(float);
+	bufferInfo2.Size = sizeof(glm::mat4) * 2;
 	bufferInfo2.Usage = vee::BufferUsage::Uniform;
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
@@ -165,15 +154,35 @@ int main()
 	vee::Input input;
 	input.Init(window);
 
+	vee::SpectatorCamera camera(10.0f, 3.0f);
+
+	float newFrameTime = 0.0f;
+	float lastFrameTime = 0.0f;
 	while (!window->ShouldClose())
 	{
-		window->Update();
-
-		// Update uniform buffer with time.
+		
+		float deltaTime = newFrameTime - lastFrameTime;
+		lastFrameTime = newFrameTime;
+		newFrameTime = (float)glfwGetTime();
+		
+		camera.Tick(input, deltaTime);
+		
 		void* data = uniformBuffer->Map();
-		float time = input.MouseX() / 1280.0f;
-		memcpy(data, &time, sizeof(float));
+		
+		struct UnitormBufferObject
+		{
+			glm::mat4 viewProjection;
+			glm::mat4 model;
+		} ubo;
+		
+		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
+		ubo.viewProjection = camera.GetCamera()->ViewProjectionMatrix();
+		
+		memcpy(data, &ubo, sizeof(ubo));
 		uniformBuffer->UnMap();
+		
+		window->Update();
+		input.Poll();
 
 		fence.Wait();
 		fence.Reset();

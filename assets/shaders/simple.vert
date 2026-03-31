@@ -1,16 +1,19 @@
 #version 450
 
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in vec3 inColor;
+layout(location = 0) in vec3 inPosition;
+
 layout(location = 0) out vec3 fragColor;
 
 layout(set = 0, binding = 0) uniform UniformBuffer
 {
-    float size;
+    mat4 vp;
+    mat4 m;
 } ubo;
 
 void main()
 {
-    gl_Position = vec4(inPosition * ubo.size, 0.0, 1.0);
-    fragColor = inColor;
+    vec4 pos = vec4(inPosition, 1.0);
+    gl_Position = ubo.vp * ubo.m * pos;
+
+    fragColor = vec3(1.0f, 1.0f, 0.0f);
 }
