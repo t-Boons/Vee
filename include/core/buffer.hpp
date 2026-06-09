@@ -29,7 +29,7 @@ namespace vee
         MemoryType MemoryType;
     };
 
-    class Buffer
+	class Buffer : public NonCopyable
     {
     public:
         Buffer(const BufferProperties& properties) : m_properties(properties) {}

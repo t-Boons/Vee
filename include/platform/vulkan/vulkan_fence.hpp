@@ -4,7 +4,7 @@
 
 namespace vee
 {
-    class VulkanFence
+	class VulkanFence : public NonCopyable
     {
     public:
         VulkanFence(bool signaled = false);

@@ -33,8 +33,8 @@ int main()
 	vee::Window* window = new vee::WindowsWindow(props);
 
 	vee::InitDevice(vee::RenderAPI::Vulkan);
-	vee::RefPtr<vee::VulkanShader> vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/simple.vert.spv");
-	vee::RefPtr<vee::VulkanShader> fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/simple.frag.spv");
+	vee::RefPtr<vee::VulkanShader> vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/test.vert.spv");
+	vee::RefPtr<vee::VulkanShader> fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/test.frag.spv");
 
 	vee::VulkanSurface* surface = new vee::VulkanSurface(*window);
 	vee::VulkanSwapchain* swapchain = new vee::VulkanSwapchain(*surface, *window);
@@ -45,76 +45,65 @@ int main()
 	vee::RefPtr<vee::VertexLayout> vertexLayout = vee::MakeRef<vee::VertexLayout>();
 	vertexLayout->m_bindingDescriptions = {
 		{0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // position
-		{1, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // normal
-		{2, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
-		{3, sizeof(float) * 4, VK_VERTEX_INPUT_RATE_VERTEX}, // tangent
-		{4, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}	 // bitangent
+		{1, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
 	};
 	vertexLayout->m_attributes = {
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 2, 2, VK_FORMAT_R32G32_SFLOAT,    0 },
-		{ 3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0 },
-		{ 4, 4, VK_FORMAT_R32G32B32_SFLOAT, 0 } 
+		{ 1, 1, VK_FORMAT_R32G32_SFLOAT,    0 },
 	};
 
 	std::vector<vee::RefPtr<vee::VulkanBuffer>> vertexBuffers;
 
-	vee::RefPtr<vee::ModelImporter> damagedHelmetImporter = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/DamagedHelmet.gltf");
-	damagedHelmetImporter->Load();
+	{
+		vee::BufferProperties bufferProperties{};
+		bufferProperties.Usage = vee::BufferUsage::Vertex;
+		bufferProperties.MemoryType = vee::MemoryType::Static;
 
-	vee::BufferProperties bufferProperties{};
-	bufferProperties.Usage = vee::BufferUsage::Vertex;
-	bufferProperties.MemoryType = vee::MemoryType::Static;
+		const std::vector<glm::vec3> vertices = 
+		{
+			{-0.5f, -0.5f, 0.0f},
+			{0.5f, -0.5f, 0.0f},
+			{0.5f, 0.5f, 0.0f},
+			{-0.5f, 0.5f, 0.0f}
+		};
+		bufferProperties.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
+		bufferProperties.Data = (void*)vertices.data();
+		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	}
 
-	const std::vector<glm::vec3> vertices = damagedHelmetImporter->Meshes()[0]->m_positions[0];
-	bufferProperties.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
-	bufferProperties.Data = (void*)vertices.data();
-	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	{
+		vee::BufferProperties bufferProperties{};
+		bufferProperties.Usage = vee::BufferUsage::Vertex;
+		bufferProperties.MemoryType = vee::MemoryType::Static;
 
+		const std::vector<glm::vec2> uvs = 
+		{
+			{0.0f, 0.0f},
+			{1.0f, 0.0f},
+			{1.0f, 1.0f},
+			{0.0f, 1.0f}
+		};
+		bufferProperties.Size = (uint32_t)sizeof(uvs[0]) * (uint32_t)uvs.size();
+		bufferProperties.Data = (void*)uvs.data();
+		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	}
 
-	const std::vector<glm::vec3> normals = damagedHelmetImporter->Meshes()[0]->m_normals[0];
-	bufferProperties.Size = (uint32_t)sizeof(normals[0]) * (uint32_t)normals.size();
-	bufferProperties.Data = (void*)normals.data();
-	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
-
-	const std::vector<glm::vec2> uvs = damagedHelmetImporter->Meshes()[0]->m_texcoords[0];
-	bufferProperties.Size = (uint32_t)sizeof(uvs[0]) * (uint32_t)uvs.size();
-	bufferProperties.Data = (void*)uvs.data();
-	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
-
-
-	const std::vector<glm::vec4> tangents = damagedHelmetImporter->Meshes()[0]->m_tangents[0];
-	bufferProperties.Size = (uint32_t)sizeof(tangents[0]) * (uint32_t)tangents.size();
-	bufferProperties.Data = (void*)tangents.data();
-	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
-
-	const std::vector<glm::vec3> bitangents = damagedHelmetImporter->Meshes()[0]->m_bitangents[0];
-	bufferProperties.Size = (uint32_t)sizeof(bitangents[0]) * (uint32_t)bitangents.size();
-	bufferProperties.Data = (void*)bitangents.data();
-	vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
-
-
-	const std::vector<uint32_t> indices = damagedHelmetImporter->Meshes()[0]->m_indices[0];
 	vee::BufferProperties indexBufferProperties{};
-	indexBufferProperties.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
 	indexBufferProperties.Usage = vee::BufferUsage::Index;
 	indexBufferProperties.MemoryType = vee::MemoryType::Static;
+
+	const std::vector<uint32_t> indices = 
+	{
+		0, 2, 1,
+		2, 3, 0
+	};
+	indexBufferProperties.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
 	indexBufferProperties.Data = (void*)indices.data();
 	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(indexBufferProperties);
 
-
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-	shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.CompileLayout();
-
-	vee::TextureProperties textureProperties{};
-	textureProperties.Width = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_width;
-	textureProperties.Height = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_height;
-	textureProperties.NumChannels = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_channels;
-	textureProperties.Data = damagedHelmetImporter->Materials()[0]->m_colorTexture->m_image.data();
-	vee::VulkanTexture albedoTexture(textureProperties);
 
 	vee::VulkanPipelineInfo pipelineInfo{};
 	pipelineInfo.VertexShader = vertexShader;
@@ -137,9 +126,7 @@ int main()
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
 
-	vee::VulkanFence fence(true);
-
-	vee::VulkanCommandList commandList(vee::QueueType::Graphics);
+	std::array<vee::VulkanCommandList, 2> commandLists(vee::QueueType::Graphics, vee::QueueType::Graphics);
 
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -160,59 +147,28 @@ int main()
 	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
 	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
-	VkSamplerCreateInfo samplerInfo{};
-	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	samplerInfo.magFilter = VK_FILTER_LINEAR;
-	samplerInfo.minFilter = VK_FILTER_LINEAR;
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.anisotropyEnable = VK_TRUE;
-	samplerInfo.maxAnisotropy = 16;
-	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	samplerInfo.unnormalizedCoordinates = VK_FALSE;
-	samplerInfo.compareEnable = VK_FALSE;
-	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias = 0.0f;
-	samplerInfo.minLod = 0.0f;
-	samplerInfo.maxLod = 0.0f;
-	VkSampler sampler;
-	VKValidate(vkCreateSampler(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &samplerInfo, nullptr, &sampler));
-
-
-	VkDescriptorImageInfo imageInfo{};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = albedoTexture.GetImageView();
-	imageInfo.sampler = sampler;
-
-	VkWriteDescriptorSet descriptorWriteTexture{};
-	descriptorWriteTexture.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWriteTexture.dstSet = descriptorSet;
-	descriptorWriteTexture.dstBinding = 1; // binding 1 for combined image sampler
-	descriptorWriteTexture.dstArrayElement = 0;
-	descriptorWriteTexture.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWriteTexture.descriptorCount = 1;
-	descriptorWriteTexture.pImageInfo = &imageInfo;
-
-	std::array<VkWriteDescriptorSet, 2> descriptorWrites = {descriptorWrite, descriptorWriteTexture};
-	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(),
-						static_cast<uint32_t>(descriptorWrites.size()),
-						descriptorWrites.data(),
-						0,
-						nullptr);
-
-
-	vee::VulkanSemaphore imageAvailableSemaphore;
-	vee::VulkanSemaphore renderFinishedSemaphore;
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &descriptorWrite, 0, nullptr);
 
 	vee::Input input;
 	input.Init(window);
 
 	vee::SpectatorCamera camera(10.0f, 3.0f);
 
+	struct FrameData
+	{
+		vee::VulkanFence Fence = vee::VulkanFence(true);
+		vee::VulkanSemaphore PresentSemaphore;
+		vee::VulkanSemaphore RenderSemaphore;
+		vee::VulkanCommandList CommandList = vee::VulkanCommandList(vee::QueueType::Graphics);
+	};
+
+
 	float newFrameTime = 0.0f;
 	float lastFrameTime = 0.0f;
+	uint32_t frameIndex = 0;
+
+	FrameData frames[2];
+
 	while (!window->ShouldClose())
 	{
 		
@@ -236,12 +192,15 @@ int main()
 		window->Update();
 		input.Poll();
 
-		fence.Wait();
-		fence.Reset();
+		FrameData* frameData = &frames[frameIndex];
+
+		frameData->Fence.Wait();
+		frameData->Fence.Reset();
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, imageAvailableSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex);
-		
+		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex);
+
+		auto& commandList = frameData->CommandList;
 		commandList.Reset();
 		commandList.Begin();
 
@@ -269,13 +228,18 @@ int main()
 		scissor.extent = {1280, 720};
 		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
 
-		std::array<VkBuffer, 5> vertexBuffersArray;
+		std::vector<VkBuffer> vertexBuffersArray;
 		for (size_t i = 0; i < vertexBuffers.size(); i++)
 		{
-			vertexBuffersArray[i] = vertexBuffers[i]->GetVKBuffer();
+			vertexBuffersArray.push_back(vertexBuffers[i]->GetVKBuffer());
 		}
 		
-		std::array<VkDeviceSize, 5> offsets = { 0, 0, 0, 0, 0 };
+		std::vector<VkDeviceSize> offsets;
+		for (size_t i = 0; i < vertexBuffers.size(); i++)
+		{
+			offsets.push_back(0);
+		}
+
 		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, vertexBuffersArray.size(), vertexBuffersArray.data(), offsets.data());
 		
 		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), indexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
@@ -289,12 +253,12 @@ int main()
 		commandList.End();
 
 
-
+		// Queue render work.
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &imageAvailableSemaphore.GetVKSempahore();
+		submitInfo.pWaitSemaphores = &frameData->RenderSemaphore.GetVKSempahore();
 		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.pWaitDstStageMask = waitStages;
 
@@ -302,22 +266,25 @@ int main()
 		submitInfo.pCommandBuffers = &commandList.GetVKCommandBuffer();
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &renderFinishedSemaphore.GetVKSempahore();
+		submitInfo.pSignalSemaphores = &frameData->PresentSemaphore.GetVKSempahore();
 		
-		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, fence.GetVKFence()));
+		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, frameData->Fence.GetVKFence()));
 
-
+		// Present the frame.
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &renderFinishedSemaphore.GetVKSempahore();
+		presentInfo.pWaitSemaphores = &frameData->PresentSemaphore.GetVKSempahore();
 		
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &swapchain->GetVKSwapchain();
 		presentInfo.pImageIndices = &imageIndex;
 		presentInfo.pResults = nullptr;
+
 		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
+
+		frameIndex = (frameIndex + 1) % 2;
 	}
 
 	delete swapchain;

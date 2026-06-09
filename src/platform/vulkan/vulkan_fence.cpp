@@ -16,6 +16,7 @@ namespace vee
     VulkanFence::~VulkanFence()
     {
         vkDestroyFence(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_fence, nullptr);
+		m_fence = VK_NULL_HANDLE;
     }
 
     void VulkanFence::Wait(uint64_t timeout)

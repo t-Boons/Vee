@@ -5,7 +5,7 @@
 
 namespace vee
 {
-    class CommmandList
+	class CommmandList : public NonCopyable
     {
     public:
         void SetPipeline(const RefPtr<PipelineState>& pipelineState) {m_pipelineState = pipelineState; }

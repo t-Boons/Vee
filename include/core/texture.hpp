@@ -12,7 +12,7 @@ namespace vee
         void* Data = nullptr;
     };
 
-    class Texture
+	class Texture : public NonCopyable
     {
     public:
         Texture(const TextureProperties& properties) : m_properties(properties) {}
