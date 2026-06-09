@@ -19,6 +19,8 @@
 #include "core/model_loading/model_importer.hpp"
 #include "glm/glm.hpp"
 
+#include <tinygltf/stb_image.h>
+
 
 using namespace std;
 
@@ -103,6 +105,7 @@ int main()
 
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.CompileLayout();
 
 	vee::VulkanPipelineInfo pipelineInfo{};
@@ -112,6 +115,10 @@ int main()
 	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
 
 	vee::RefPtr<vee::VulkanPipeline> pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
+
+	
+
+
 
 	struct UnitormBufferObject
 	{
@@ -125,8 +132,6 @@ int main()
 	bufferInfo2.Usage = vee::BufferUsage::Uniform;
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
-
-	std::array<vee::VulkanCommandList, 2> commandLists(vee::QueueType::Graphics, vee::QueueType::Graphics);
 
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -147,7 +152,40 @@ int main()
 	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
 	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
-	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 1, &descriptorWrite, 0, nullptr);
+
+	int texWidth, texHeight, texChannels;
+
+	stbi_uc* pixels = stbi_load("../../../assets/textures/checkerboard.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+
+	vee::TextureProperties texture{};
+	texture.Width = 256;
+	texture.Height = 256;
+	texture.NumChannels = 4;
+	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
+
+
+	vee::VulkanSampler blockySampler;
+
+	VkDescriptorImageInfo imageBufferInfo;
+	imageBufferInfo.sampler = blockySampler.GetVulkanSampler();
+	imageBufferInfo.imageView = diffuseTexture->GetImageView();
+	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet imageBufferInfoWrite{};
+	imageBufferInfoWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	imageBufferInfoWrite.dstSet = descriptorSet;
+	imageBufferInfoWrite.dstBinding = 1;
+	imageBufferInfoWrite.dstArrayElement = 0;
+	imageBufferInfoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	imageBufferInfoWrite.descriptorCount = 1;
+	imageBufferInfoWrite.pImageInfo = &imageBufferInfo;
+
+	VkWriteDescriptorSet descriptorWrites[] = { descriptorWrite, imageBufferInfoWrite };
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites, 0, nullptr);
+
+
+
 
 	vee::Input input;
 	input.Init(window);

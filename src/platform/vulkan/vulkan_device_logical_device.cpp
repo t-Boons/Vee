@@ -45,14 +45,15 @@ namespace vee
         }
 
         {
-            VkDescriptorPoolSize poolSize{};
-            poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSize.descriptorCount = 4096;
+            VkDescriptorPoolSize poolSizes[] = {
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096 },
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024 }
+            };
 
             VkDescriptorPoolCreateInfo poolInfo{};
             poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            poolInfo.poolSizeCount = 1;
-            poolInfo.pPoolSizes = &poolSize;
+            poolInfo.poolSizeCount = 2;
+            poolInfo.pPoolSizes = poolSizes;
             poolInfo.maxSets = 4096;
             
             vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
