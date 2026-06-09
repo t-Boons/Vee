@@ -5,7 +5,7 @@
 #include "platform/vulkan/vulkan_shader.hpp"
 #include "platform/vulkan/vulkan_surface.hpp"
 #include "platform/vulkan/vulkan_swapchain.hpp"
-#include "platform/vulkan/vulkan_shader.hpp"
+#include "platform/vulkan/vulkan_sampler.hpp"
 #include "platform/vulkan/vulkan_pipeline.hpp"
 #include "platform/vulkan/vulkan_buffer.hpp"
 #include "platform/vulkan/vulkan_fence.hpp"
