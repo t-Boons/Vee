@@ -93,6 +93,13 @@ namespace vee
         vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
     }
+
+	if (properties.Data && properties.MemoryType == MemoryType::Dynamic)
+	{
+		void* mappedData = Map();
+		memcpy(mappedData, properties.Data, properties.Size);
+		UnMap();
+	}
 }
 
     VulkanBuffer::~VulkanBuffer()

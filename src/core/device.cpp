@@ -6,7 +6,7 @@ void vee::InitDevice(RenderAPI api)
     switch(api)
     {
     case RenderAPI::Vulkan:
-        g_vkDevice = new VulkanDevice(false);
+        g_vkDevice = new VulkanDevice(true);
         break;
     }
 }
