@@ -24,10 +24,28 @@ namespace vee
         allocatorInfo.instance = m_instance->GetVkInstance();
         allocatorInfo.physicalDevice = m_physicalDevice->GetVKPhysicalDevice();
         allocatorInfo.device = m_device->GetVKDevice();
-        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_4;
 
         vmaCreateAllocator(&allocatorInfo, &m_allocator);
     }
+
+	void VulkanDevice::DebugNameResource(VkObjectType type, uint64_t handle, const std::string& name)
+	{
+		if (m_enableValidationLayers)
+		{
+			VkDebugUtilsObjectNameInfoEXT nameInfo{};
+			nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			nameInfo.objectType = type;
+			nameInfo.objectHandle = handle;
+			nameInfo.pObjectName = name.c_str();
+			auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(m_device->GetVKDevice(), "vkSetDebugUtilsObjectNameEXT");
+
+			if (func != nullptr)
+			{
+				func(m_device->GetVKDevice(), &nameInfo);
+			}
+		}
+	}
 
     VulkanDevice::~VulkanDevice()
     {

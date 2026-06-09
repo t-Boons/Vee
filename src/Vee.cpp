@@ -159,8 +159,9 @@ int main()
 
 
 	vee::TextureProperties texture{};
-	texture.Width = 256;
-	texture.Height = 256;
+	texture.Width = texWidth;
+	texture.Height = texHeight;
+	texture.Data = pixels;
 	texture.NumChannels = 4;
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
 
@@ -236,7 +237,7 @@ int main()
 		frameData->Fence.Reset();
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex);
+		VKValidate(vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex));
 
 		auto& commandList = frameData->CommandList;
 		commandList.Reset();

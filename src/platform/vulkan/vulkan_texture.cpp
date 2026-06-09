@@ -2,6 +2,7 @@
 #include "platform/vulkan/vulkan_device.hpp"
 #include "platform/vulkan/vulkan_commandlist.hpp"
 #include "platform/vulkan/vulkan_buffer.hpp"
+#include "platform/vulkan/vulkan_fence.hpp"
 #include "tinygltf/stb_image.h"
 
 namespace vee
@@ -9,6 +10,8 @@ namespace vee
     VulkanTexture::VulkanTexture(const TextureProperties& properties)
         : Texture(properties)
     {
+		CheckMsg(properties.Data != nullptr, "Texture data cannot be null");
+
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -30,6 +33,7 @@ namespace vee
 
         VKValidate(vmaCreateImage(VKDevice()->GetAllocator(), &imageInfo, &allocInfo, &m_image, &m_allocation, nullptr));
 
+        VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE, (uint64_t)m_image, properties.DebugName);
 
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -86,15 +90,19 @@ namespace vee
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier(commandList.GetVKCommandBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(commandList.GetVKCommandBuffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         commandList.End();
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandList.GetVKCommandBuffer();
-        VKValidate(vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, VK_NULL_HANDLE));
-        vkQueueWaitIdle(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics));
+
+        VulkanFence fence;
+        VKValidate(vkQueueSubmit(VKDevice()->GetLogicalDevice()->GetQueue(QueueType::Graphics), 1, &submitInfo, fence.GetVKFence()));
+        fence.Wait();
+        fence.Reset();
+        commandList.Reset();
         delete stagingBuffer;
     }
 

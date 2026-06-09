@@ -10,6 +10,7 @@ namespace vee
         uint32_t Height;
         uint32_t NumChannels;
         void* Data = nullptr;
+        std::string DebugName = "Texture";
     };
 
 	class Texture : public NonCopyable

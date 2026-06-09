@@ -17,8 +17,7 @@ namespace vee
         VulkanInstance* GetInstance() const { return m_instance; }
         VmaAllocator GetAllocator() const { return m_allocator; }
         bool IsValidationLayersEnabled() const { return m_enableValidationLayers; }
-
-
+        void DebugNameResource(VkObjectType type, uint64_t handle, const std::string& name);
         std::string GetDeviceName() const { return m_physicalDevice->GetDeviceName(); }
 
     private:
@@ -31,6 +30,4 @@ namespace vee
 
     extern VulkanDevice* g_vkDevice;
     VulkanDevice* VKDevice();
-
-
 }
