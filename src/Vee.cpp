@@ -94,7 +94,7 @@ int main()
 
 	const std::vector<uint32_t> indices = 
 	{
-		0, 2, 1,
+		0, 1, 2,
 		2, 3, 0
 	};
 	indexBufferProperties.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
