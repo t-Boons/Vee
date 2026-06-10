@@ -9,6 +9,8 @@ layout(location = 4) in vec3 inFragPos;
 layout(location = 0) out vec4 outColor;
 
 layout(set = 0, binding = 1) uniform sampler2D albedoMap;
+layout(set = 0, binding = 2) uniform sampler2D normalMap;
+layout(set = 0, binding = 3) uniform sampler2D roughnessMap;
 
 float dot01(vec3 a, vec3 b)
 {
@@ -40,6 +42,8 @@ vec3 MapNormal(vec3 texNormal, vec3 T, vec3 B, vec3 N, float scale)
 
 void main()
 {
-    vec3 texColor = vec3(inTexCoords.x, inTexCoords.y, 0.0f);
+    vec3 normal = MapNormal(texture(normalMap
+
+    vec3 texColor = texture(albedoMap, inTexCoords).xyz;
     outColor = vec4(texColor, 1.0f);
 }

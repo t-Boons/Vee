@@ -26,6 +26,41 @@
 
 using namespace std;
 
+
+struct Binding
+{
+	VkDescriptorImageInfo Info;
+	VkWriteDescriptorSet Write;
+};
+
+Binding* CreateImageBinding(uint32_t binding, VkDescriptorType type, VkSampler sampler, VkImageView imageView, VkDescriptorSet descriptorSet)
+{
+	Binding* result = new Binding{};
+	result->Info.sampler = sampler;
+	result->Info.imageView = imageView;
+	result->Info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	result->Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	result->Write.dstBinding = binding;
+	result->Write.descriptorCount = 1;
+	result->Write.descriptorType = type;
+	result->Write.pImageInfo = &result->Info;
+	result->Write.dstSet = descriptorSet;
+	return result;
+}
+
+Binding* CreateBufferBinding(uint32_t binding, VkDescriptorType type, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range, VkDescriptorSet descriptorSet)
+{
+	Binding* result = new Binding{};
+	result->Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	result->Write.dstBinding = binding;
+	result->Write.descriptorCount = 1;
+	result->Write.descriptorType = type;
+	result->Write.pBufferInfo = new VkDescriptorBufferInfo{ buffer, offset, range };
+	result->Write.dstSet = descriptorSet;
+	return result;
+}
+
+
 int main()
 {
 	vee::Log::Info("Starting Vee Engine...");
@@ -37,8 +72,8 @@ int main()
 	vee::Window* window = new vee::WindowsWindow(props);
 
 	vee::InitDevice(vee::RenderAPI::Vulkan);
-	vee::RefPtr<vee::VulkanShader> vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/test.vert.spv");
-	vee::RefPtr<vee::VulkanShader> fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/test.frag.spv");
+	vee::RefPtr<vee::VulkanShader> vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/simple.vert.spv");
+	vee::RefPtr<vee::VulkanShader> fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/simple.frag.spv");
 
 	vee::VulkanSurface* surface = new vee::VulkanSurface(*window);
 	vee::VulkanSwapchain* swapchain = new vee::VulkanSwapchain(*surface, *window);
@@ -49,11 +84,17 @@ int main()
 	vee::RefPtr<vee::VertexLayout> vertexLayout = vee::MakeRef<vee::VertexLayout>();
 	vertexLayout->m_bindingDescriptions = {
 		{0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // position
-		{1, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
+		{1, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // normal
+		{2, sizeof(float) * 2, VK_VERTEX_INPUT_RATE_VERTEX}, // uv
+		{3, sizeof(float) * 4, VK_VERTEX_INPUT_RATE_VERTEX}, // tangent
+		{4, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX}, // bitangent
 	};
 	vertexLayout->m_attributes = {
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 1, VK_FORMAT_R32G32_SFLOAT,    0 },
+		{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT,    0 },
+		{ 2, 2, VK_FORMAT_R32G32_SFLOAT,    0 },
+		{ 3, 3, VK_FORMAT_R32G32B32A32_SFLOAT, 0 },
+		{ 4, 4, VK_FORMAT_R32G32B32_SFLOAT, 0 },
 	};
 
 	std::vector<vee::RefPtr<vee::VulkanBuffer>> vertexBuffers;
@@ -79,10 +120,40 @@ int main()
 		bufferProperties.Usage = vee::BufferUsage::Vertex;
 		bufferProperties.MemoryType = vee::MemoryType::Static;
 
-		const std::vector<glm::vec2> uvs = importer->Meshes()[0]->m_texcoords[0];
+		const std::vector<glm::vec3> normals = importer->Meshes()[0]->m_normals[0];
 
-		bufferProperties.Size = (uint32_t)sizeof(uvs[0]) * (uint32_t)uvs.size();
-		bufferProperties.Data = (void*)uvs.data();
+		bufferProperties.Size = (uint32_t)sizeof(normals[0]) * (uint32_t)normals.size();
+		bufferProperties.Data = (void*)normals.data();
+		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	}
+
+	{
+		vee::BufferProperties bufferProperties{};
+		bufferProperties.Usage = vee::BufferUsage::Vertex;
+		bufferProperties.MemoryType = vee::MemoryType::Static;
+		const std::vector<glm::vec2> texcoords = importer->Meshes()[0]->m_texcoords[0];
+		bufferProperties.Size = (uint32_t)sizeof(texcoords[0]) * (uint32_t)texcoords.size();
+		bufferProperties.Data = (void*)texcoords.data();
+		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	}
+
+	{
+		vee::BufferProperties bufferProperties{};
+		bufferProperties.Usage = vee::BufferUsage::Vertex;
+		bufferProperties.MemoryType = vee::MemoryType::Static;
+		const std::vector<glm::vec4> tangents = importer->Meshes()[0]->m_tangents[0];
+		bufferProperties.Size = (uint32_t)sizeof(tangents[0]) * (uint32_t)tangents.size();
+		bufferProperties.Data = (void*)tangents.data();
+		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
+	}
+
+	{
+		vee::BufferProperties bufferProperties{};
+		bufferProperties.Usage = vee::BufferUsage::Vertex;
+		bufferProperties.MemoryType = vee::MemoryType::Static;
+		const std::vector<glm::vec3> bitangents = importer->Meshes()[0]->m_bitangents[0];
+		bufferProperties.Size = (uint32_t)sizeof(bitangents[0]) * (uint32_t)bitangents.size();
+		bufferProperties.Data = (void*)bitangents.data();
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
 	}
 
@@ -99,6 +170,8 @@ int main()
 	vee::VulkanShaderBinding shaderBinding;
 	shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 	shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	shaderBinding.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	shaderBinding.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.CompileLayout();
 
 	vee::VulkanPipelineInfo pipelineInfo{};
@@ -136,47 +209,19 @@ int main()
 	VkDescriptorSet descriptorSet;
 	vkAllocateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &descriptorSet);
 
-	VkWriteDescriptorSet descriptorWrite{};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet;
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrite.descriptorCount = 1;
-	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
-	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
-
-	// Checkerboard texture.
-	int texWidth, texHeight, texChannels;
-
-	stbi_uc* pixels = stbi_load("../../../assets/textures/checkerboard.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 	vee::TextureProperties texture{};
-	texture.Width = texWidth;
-	texture.Height = texHeight;
-	texture.Data = pixels;
+	texture.Width = importer->Materials()[0]->m_colorTexture->m_width;
+	texture.Height = importer->Materials()[0]->m_colorTexture->m_height;
+	texture.Data = importer->Materials()[0]->m_colorTexture->m_image.data();
 	texture.NumChannels = 4;
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
 
-	stbi_image_free(pixels);
-
 	vee::VulkanSampler blockySampler;
 
-	VkDescriptorImageInfo imageBufferInfo;
-	imageBufferInfo.sampler = blockySampler.GetVulkanSampler();
-	imageBufferInfo.imageView = diffuseTexture->GetImageView();
-	imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkWriteDescriptorSet imageBufferInfoWrite{};
-	imageBufferInfoWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	imageBufferInfoWrite.dstSet = descriptorSet;
-	imageBufferInfoWrite.dstBinding = 1;
-	imageBufferInfoWrite.dstArrayElement = 0;
-	imageBufferInfoWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	imageBufferInfoWrite.descriptorCount = 1;
-	imageBufferInfoWrite.pImageInfo = &imageBufferInfo;
-
-	VkWriteDescriptorSet descriptorWrites[] = { descriptorWrite, imageBufferInfoWrite };
+	Binding* uniformBinding = CreateBufferBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer->GetVKBuffer(), 0, uniformBuffer->GetSize(), descriptorSet);
+	Binding* diffuseBinding = CreateImageBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), diffuseTexture->GetImageView(), descriptorSet);
+	VkWriteDescriptorSet descriptorWrites[] = { uniformBinding->Write, diffuseBinding->Write };
 	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites, 0, nullptr);
 
 
@@ -206,23 +251,10 @@ int main()
 	VkDescriptorSet skyDescriptorSet;
 	vkAllocateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &skyDescAllocInfo, &skyDescriptorSet);
 
-	VkDescriptorImageInfo skyboxImageInfo;
-	skyboxImageInfo.sampler = blockySampler.GetVulkanSampler();
-	skyboxImageInfo.imageView = reinterpret_cast<vee::VulkanTextureCube*>(sky.m_texture.get())->GetImageView();
-	skyboxImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	Binding* skyUniformBinding = CreateBufferBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer->GetVKBuffer(), 0, uniformBuffer->GetSize(), skyDescriptorSet);
+	Binding* skyboxImageBinding = CreateImageBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), reinterpret_cast<vee::VulkanTextureCube*>(sky.m_texture.get())->GetImageView(), skyDescriptorSet);
 
-	VkWriteDescriptorSet skyboxImageWriteDesc{};
-	skyboxImageWriteDesc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	skyboxImageWriteDesc.dstSet = skyDescriptorSet;
-	skyboxImageWriteDesc.dstBinding = 1;
-	skyboxImageWriteDesc.dstArrayElement = 0;
-	skyboxImageWriteDesc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	skyboxImageWriteDesc.descriptorCount = 1;
-	skyboxImageWriteDesc.pImageInfo = &skyboxImageInfo;
-
-	descriptorWrite.dstSet = skyDescriptorSet;
-
-	VkWriteDescriptorSet descriptorWrites2[] = { descriptorWrite, skyboxImageWriteDesc };
+	VkWriteDescriptorSet descriptorWrites2[] = { skyUniformBinding->Write, skyboxImageBinding->Write };
 	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites2, 0, nullptr);
 
 
@@ -278,8 +310,17 @@ int main()
 		frames[i]->CommandList = MakeRef<vee::VulkanCommandList>(vee::CommandListInfo{ vee::QueueType::Graphics, "Frame_" + to_string(i) });
 	}
 
+	float time = 0.0f;
 	while (!window->ShouldClose())
 	{
+		if (input.IsKeyDown(GLFW_KEY_R))
+		{
+			vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/simple.vert.spv");
+			fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/simple.frag.spv");
+			pipelineInfo.VertexShader = vertexShader;
+			pipelineInfo.FragmentShader = fragmentShader;
+			pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
+		}
 		
 		float deltaTime = newFrameTime - lastFrameTime;
 		lastFrameTime = newFrameTime;
@@ -291,7 +332,13 @@ int main()
 		
 		UnitormBufferObject ubo;
 		
-		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
+		time += deltaTime;
+		glm::quat yaw = glm::angleAxis(glm::radians(time * 20.0f), glm::vec3(0, 1, 0));
+		glm::quat pitch = glm::angleAxis(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+		glm::quat roll = glm::angleAxis(glm::radians(0.0f), glm::vec3(0, 0, 1));
+		glm::mat4 rotation = glm::mat4_cast(yaw * pitch * roll);
+
+		ubo.model = glm::mat4(1.0f) * rotation;
 		ubo.view = camera.GetCamera()->ViewMatrix();
 		ubo.projection = camera.GetCamera()->ProjectionMatrix();
 		ubo.normalMatrix = glm::mat3(glm::transpose(glm::inverse(ubo.model)));

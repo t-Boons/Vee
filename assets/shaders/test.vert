@@ -17,8 +17,6 @@ void main()
 {
     mat4 mvp = ubo.projection * ubo.view * ubo.model;
 
-    vec4 worldPos = ubo.model * vec4(vertices, 1.0);
-
     outTexCoords = texCoords;
     gl_Position = mvp * vec4(vertices, 1.0);
 }
