@@ -12,6 +12,9 @@ namespace vee
 		std::array<int, CUBEMAP_FACE_COUNT> textureWidths;
 		std::array<int, CUBEMAP_FACE_COUNT> textureHeights;
 		std::array<int, CUBEMAP_FACE_COUNT> textureNumChannels;
+
+		stbi_set_flip_vertically_on_load(1);
+
 		for (size_t i = 0; i < CUBEMAP_FACE_COUNT; i++)
 		{
 			cubeProperties.Data[i] = stbi_load(properties.TextureFilePaths[i].c_str(), &textureWidths[i], &textureHeights[i], &textureNumChannels[i], 4);

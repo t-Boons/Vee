@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform UniformBuffer
 
 void main()
 {
-worldPos = vec3(vertices.x, -vertices.y, vertices.z);
+    worldPos = vertices;
 
     vec4 pos = ubo.projection * mat4(mat3(ubo.view)) * vec4(vertices, 1.0);
     gl_Position = pos.xyww;

@@ -172,6 +172,8 @@ int main()
 	shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	shaderBinding.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	shaderBinding.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	shaderBinding.CompileLayout();
 
 	vee::VulkanPipelineInfo pipelineInfo{};
@@ -186,16 +188,17 @@ int main()
 
 
 
-	struct UnitormBufferObject
+	struct UniformBufferObject
 	{
 		glm::mat4 view;
 		glm::mat4 projection;
 		glm::mat4 model;
-		glm::mat3 normalMatrix;
+		glm::mat4 normalMatrix;
+		glm::vec4 cameraPos;
 	};
 
 	vee::BufferProperties bufferInfo2{};
-	bufferInfo2.Size = sizeof(UnitormBufferObject);
+	bufferInfo2.Size = sizeof(UniformBufferObject);
 	bufferInfo2.Usage = vee::BufferUsage::Uniform;
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
@@ -217,22 +220,42 @@ int main()
 	texture.NumChannels = 4;
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
 
+	texture.Width = importer->Materials()[0]->m_normalTexture->m_width;
+	texture.Height = importer->Materials()[0]->m_normalTexture->m_height;
+	texture.Data = importer->Materials()[0]->m_normalTexture->m_image.data();
+	texture.NumChannels = 4;
+	vee::VulkanTexture* normalTexture = new vee::VulkanTexture(texture);
+
+	texture.Width = importer->Materials()[0]->m_metallicRoughnessTexture->m_width;
+	texture.Height = importer->Materials()[0]->m_metallicRoughnessTexture->m_height;
+	texture.Data = importer->Materials()[0]->m_metallicRoughnessTexture->m_image.data();
+	texture.NumChannels = 4;
+	vee::VulkanTexture* metallicRoughnessTexture = new vee::VulkanTexture(texture);
+
+	texture.Width = importer->Materials()[0]->m_emissionTexture->m_width;
+	texture.Height = importer->Materials()[0]->m_emissionTexture->m_height;
+	texture.Data = importer->Materials()[0]->m_emissionTexture->m_image.data();
+	texture.NumChannels = 4;
+	vee::VulkanTexture* emissionTexture = new vee::VulkanTexture(texture);
+
 	vee::VulkanSampler blockySampler;
 
 	Binding* uniformBinding = CreateBufferBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniformBuffer->GetVKBuffer(), 0, uniformBuffer->GetSize(), descriptorSet);
 	Binding* diffuseBinding = CreateImageBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), diffuseTexture->GetImageView(), descriptorSet);
-	VkWriteDescriptorSet descriptorWrites[] = { uniformBinding->Write, diffuseBinding->Write };
-	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites, 0, nullptr);
+	Binding* normalBinding = CreateImageBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), normalTexture->GetImageView(), descriptorSet);
+	Binding* metallicRoughnessBinding = CreateImageBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), metallicRoughnessTexture->GetImageView(), descriptorSet);
+	Binding* emissionBinding = CreateImageBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), emissionTexture->GetImageView(), descriptorSet);
+
 
 
 	vee::Sky sky;
 	sky.SetupSkybox({ {
 		"../../../assets/textures/skybox/right.png",
 		"../../../assets/textures/skybox/left.png",
-		"../../../assets/textures/skybox/top.png",
 		"../../../assets/textures/skybox/bottom.png",
+		"../../../assets/textures/skybox/top.png",
 		"../../../assets/textures/skybox/front.png",
-		"../../../assets/textures/skybox/back.png"
+		"../../../assets/textures/skybox/back.png",
 	} });
 
 
@@ -256,6 +279,11 @@ int main()
 
 	VkWriteDescriptorSet descriptorWrites2[] = { skyUniformBinding->Write, skyboxImageBinding->Write };
 	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites2, 0, nullptr);
+
+
+	Binding* skyboxImageBindingForModel = CreateImageBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, blockySampler.GetVulkanSampler(), reinterpret_cast<vee::VulkanTextureCube*>(sky.m_texture.get())->GetImageView(), descriptorSet);
+	VkWriteDescriptorSet descriptorWrites[] = { uniformBinding->Write, diffuseBinding->Write, normalBinding->Write, metallicRoughnessBinding->Write, emissionBinding->Write, skyboxImageBindingForModel->Write };
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 6, descriptorWrites, 0, nullptr);
 
 
 	vee::RefPtr<vee::VertexLayout> skyVertexLayout = vee::MakeRef<vee::VertexLayout>();
@@ -313,15 +341,6 @@ int main()
 	float time = 0.0f;
 	while (!window->ShouldClose())
 	{
-		if (input.IsKeyDown(GLFW_KEY_R))
-		{
-			vertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/simple.vert.spv");
-			fragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/simple.frag.spv");
-			pipelineInfo.VertexShader = vertexShader;
-			pipelineInfo.FragmentShader = fragmentShader;
-			pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
-		}
-		
 		float deltaTime = newFrameTime - lastFrameTime;
 		lastFrameTime = newFrameTime;
 		newFrameTime = (float)glfwGetTime();
@@ -330,7 +349,7 @@ int main()
 		
 		void* data = uniformBuffer->Map();
 		
-		UnitormBufferObject ubo;
+		UniformBufferObject ubo;
 		
 		time += deltaTime;
 		glm::quat yaw = glm::angleAxis(glm::radians(time * 20.0f), glm::vec3(0, 1, 0));
@@ -341,7 +360,8 @@ int main()
 		ubo.model = glm::mat4(1.0f) * rotation;
 		ubo.view = camera.GetCamera()->ViewMatrix();
 		ubo.projection = camera.GetCamera()->ProjectionMatrix();
-		ubo.normalMatrix = glm::mat3(glm::transpose(glm::inverse(ubo.model)));
+		ubo.normalMatrix = glm::mat4(glm::transpose(glm::inverse(ubo.model)));
+		ubo.cameraPos = glm::vec4(camera.GetCamera()->Position(), 1.0f);
 		
 		memcpy(data, &ubo, sizeof(ubo));
 		uniformBuffer->UnMap();

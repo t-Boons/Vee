@@ -17,7 +17,8 @@ layout(set = 0, binding = 0) uniform UniformBuffer
     mat4 view;
     mat4 projection;
     mat4 model;
-    mat3 normalMatrix;
+    mat4 normalMatrix;
+    vec4 camPos;
 } ubo;
 
 void main()
@@ -29,12 +30,12 @@ void main()
     outFragPos = worldPos.xyz;
     outTexCoords = texCoords;
 
-    outNormal = normalize(ubo.normalMatrix * normals);
+    outNormal = normalize(mat3(ubo.normalMatrix) * normals);
 
     vec3 T = normalize(mat3(ubo.model) * tangents.xyz);
     outTangent = vec4(T, tangents.w);
 
-    outBitangent = normalize(ubo.normalMatrix * bitangents);
+    outBitangent = normalize(mat3(ubo.normalMatrix) * bitangents);
 
     gl_Position = mvp * vec4(vertices, 1.0);
 }
