@@ -186,7 +186,7 @@ int main()
 
 	struct FrameData
 	{
-		vee::VulkanFence Fence = vee::VulkanFence(true);
+		vee::VulkanFence Fence = vee::VulkanFence(false);
 		vee::VulkanSemaphore PresentSemaphore;
 		vee::VulkanSemaphore RenderSemaphore;
 		vee::VulkanCommandList CommandList = vee::VulkanCommandList(vee::QueueType::Graphics);
@@ -224,11 +224,11 @@ int main()
 
 		FrameData* frameData = &frames[frameIndex];
 
-		frameData->Fence.Wait();
-		frameData->Fence.Reset();
-
 		uint32_t imageIndex;
-		VKValidate(vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), VK_NULL_HANDLE, &imageIndex));
+		vee::VulkanFence fence;
+		VKValidate(vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), fence.GetVKFence(), &imageIndex));
+		fence.Wait();
+		fence.Reset();
 
 		auto& commandList = frameData->CommandList;
 		commandList.Reset();
@@ -313,6 +313,9 @@ int main()
 		presentInfo.pResults = nullptr;
 
 		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
+
+		frameData->Fence.Wait();
+		frameData->Fence.Reset();
 
 		frameIndex = (frameIndex + 1) % 2;
 	}
