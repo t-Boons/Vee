@@ -1,12 +1,23 @@
 #include "core/device.hpp"
 #include "platform/vulkan/vulkan_device.hpp"
 
-void vee::InitDevice(RenderAPI api)
+namespace vee
 {
-    switch(api)
+    RenderAPI g_currentRenderAPI = RenderAPI::None;
+
+    RenderAPI vee::CurrentRenderAPI()
     {
-    case RenderAPI::Vulkan:
-        g_vkDevice = new VulkanDevice(true);
-        break;
+        return g_currentRenderAPI;
+    }
+
+    void vee::InitDevice(RenderAPI api)
+    {
+        switch (api)
+        {
+        case RenderAPI::Vulkan:
+			g_currentRenderAPI = RenderAPI::Vulkan;
+            g_vkDevice = new VulkanDevice(true);
+            break;
+        }
     }
 }

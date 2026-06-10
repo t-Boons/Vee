@@ -20,6 +20,7 @@ namespace vee
         VkImage m_image;
         VkImageView m_imageView;
         VmaAllocation m_allocation;
+        TextureProperties m_properties;
     };
 
     class VulkanTextureCube : public TextureCube
@@ -37,5 +38,6 @@ namespace vee
         VkImage m_image;
         VkImageView m_imageView;
         VmaAllocation m_allocation;
+        TextureCubeProperties m_properties;
     };
 }

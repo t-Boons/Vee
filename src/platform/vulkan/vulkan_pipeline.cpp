@@ -121,11 +121,16 @@ namespace vee
         VkPipelineViewportStateCreateInfo viewportState = CreateDefaultViewportState();
         VkPipelineRasterizationStateCreateInfo rasterizer = CreateDefaultRasterizer();
 
+		rasterizer.cullMode = info.Cull ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
+
         VkPipelineColorBlendAttachmentState colorBlendAttachment = CreateDefaultColorBlendAttachment();
         VkPipelineColorBlendStateCreateInfo colorBlending = CreateDefaultColorBlending(colorBlendAttachment);
         VkPipelineMultisampleStateCreateInfo multisampling = CreateDefaultMultisampling();
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = CreateDefaultInputAssembly();
 		VkPipelineDepthStencilStateCreateInfo depthStencil = CreateDefaultDepthStencil();
+
+		depthStencil.depthWriteEnable = info.EnableDepth ? VK_TRUE : VK_FALSE;
+		depthStencil.depthCompareOp = info.EnableDepth ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS;
 
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};

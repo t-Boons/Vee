@@ -1,6 +1,9 @@
 #pragma once
 
 #include "common.hpp"
+#include "device.hpp"
+
+#define CUBEMAP_FACE_COUNT 6
 
 namespace vee
 {
@@ -10,17 +13,15 @@ namespace vee
         uint32_t Height;
         uint32_t NumChannels;
         void* Data = nullptr;
-        std::string DebugName = "Texture";
+        std::string DebugName = "Unnamed";
     };
 
 	class Texture : public NonCopyable
     {
     public:
-        Texture(const TextureProperties& properties) : m_properties(properties) {}
-        virtual ~Texture() = default;
+        static RefPtr<Texture> Create(const TextureProperties& properties);
 
-    protected:
-        TextureProperties m_properties;
+        virtual ~Texture() = default;
     };
 
     struct TextureCubeProperties
@@ -28,18 +29,16 @@ namespace vee
         uint32_t Width;
         uint32_t Height;
         uint32_t NumChannels;
-        std::array<void*, 6> Data = {};
-        std::string DebugName = "TextureCube";
+        std::array<void*, CUBEMAP_FACE_COUNT> Data = {};
+        std::string DebugName = "Unnamed";
     };
 
 
     class TextureCube : public NonCopyable
     {
     public:
-        TextureCube(const TextureCubeProperties& properties) : m_properties(properties) {}
-        virtual ~TextureCube() = default;
+        static RefPtr<TextureCube> Create(const TextureCubeProperties& properties);
 
-    protected:
-        TextureCubeProperties m_properties;
+        virtual ~TextureCube() = default;
     };
 }

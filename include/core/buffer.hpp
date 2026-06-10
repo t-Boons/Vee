@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "device.hpp"
 
 namespace vee
 {
@@ -20,7 +21,6 @@ namespace vee
     };
 
 
-
     struct BufferProperties
     {
         uint32_t Size;
@@ -31,15 +31,13 @@ namespace vee
     };
 
 	class Buffer : public NonCopyable
-    {
-    public:
-        Buffer(const BufferProperties& properties) : m_properties(properties) {}
-        virtual ~Buffer() = default;
+	{
+	public:
+        static RefPtr<Buffer> Create(const BufferProperties& properties);
 
-        virtual void* Map() = 0;
-        virtual void UnMap() = 0;
-        
-    protected:
-        BufferProperties m_properties;
-    };
+		virtual ~Buffer() = default;
+
+		virtual void* Map() = 0;
+		virtual void UnMap() = 0;
+	};
 }

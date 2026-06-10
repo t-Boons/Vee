@@ -42,18 +42,15 @@ namespace vee
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
         VKValidate(vkCreateSwapchainKHR(VKDevice()->GetLogicalDevice()->GetVKDevice(), &createInfo, nullptr, &m_swapchain));
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t)m_swapchain, "Swapchain");
 
         uint32_t imageCount = 2;
         VKValidate(vkGetSwapchainImagesKHR(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_swapchain, &imageCount, m_swapChainImages.data()));
 
 
-
-        // -------------------------------------------------------
-    // Create color + depth image views
-    // -------------------------------------------------------
         for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
         {
-            // --- Color image view (from swapchain, no allocation needed) ---
+            // Color image view from swapchain.
             VkImageViewCreateInfo colorViewInfo{};
             colorViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             colorViewInfo.image = m_swapChainImages[i];
@@ -70,8 +67,9 @@ namespace vee
             colorViewInfo.subresourceRange.layerCount = 1;
 
             VKValidate(vkCreateImageView(VKDevice()->GetLogicalDevice()->GetVKDevice(), &colorViewInfo, nullptr, &m_swapChainImageViews[i]));
+			VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_swapChainImageViews[i], "SwapchainImageView_" + std::to_string(i));
 
-            // --- Depth image (must be allocated manually) ---
+            // Depth image and view.
             VkImageCreateInfo depthImageInfo{};
             depthImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             depthImageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -92,6 +90,7 @@ namespace vee
             depthAllocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
             VKValidate(vmaCreateImage(VKDevice()->GetAllocator(), &depthImageInfo, &depthAllocInfo, &m_swapChainDepthImages[i], &m_swapChainDepthImageAllocations[i], nullptr));
+			VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE, (uint64_t)m_swapChainDepthImages[i], "SwapchainDepthImage_" + std::to_string(i));
 
             VkImageViewCreateInfo depthViewInfo{};
             depthViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -105,6 +104,7 @@ namespace vee
             depthViewInfo.subresourceRange.layerCount = 1;
 
             VKValidate(vkCreateImageView(VKDevice()->GetLogicalDevice()->GetVKDevice(), &depthViewInfo, nullptr, &m_swapChainDepthImageViews[i]));
+			VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_swapChainDepthImageViews[i], "SwapchainDepthImageView_" + std::to_string(i));
         }
 
         VkAttachmentDescription colorAttachment{};
@@ -151,6 +151,7 @@ namespace vee
         renderPassInfo.pSubpasses = &subpass;
 
         VKValidate(vkCreateRenderPass(VKDevice()->GetLogicalDevice()->GetVKDevice(), &renderPassInfo, nullptr, &m_swapchainRenderPass));
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)m_swapchainRenderPass, "SwapchainRenderPass");
 
         // Framebuffers
         for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
@@ -170,6 +171,7 @@ namespace vee
             framebufferInfo.layers = 1;
 
             VKValidate(vkCreateFramebuffer(VKDevice()->GetLogicalDevice()->GetVKDevice(), &framebufferInfo, nullptr, &m_swapChainFrameBuffers[i]));
+            VKDevice()->DebugNameResource(VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)m_swapChainFrameBuffers[i], "SwapchainFramebuffer_" + std::to_string(i));
         }
     }
 

@@ -8,7 +8,7 @@
 namespace vee
 {
     VulkanTexture::VulkanTexture(const TextureProperties& properties)
-        : Texture(properties)
+        : m_properties(properties)
     {
 		CheckMsg(properties.Data != nullptr, "Texture data cannot be null");
 
@@ -117,9 +117,9 @@ namespace vee
 
 
     VulkanTextureCube::VulkanTextureCube(const TextureCubeProperties& properties)
-        : TextureCube(properties)
+        : m_properties(properties)
     {
-		for (uint32_t i = 0; i < 6; i++)
+		for (uint32_t i = 0; i < CUBEMAP_FACE_COUNT; i++)
         {
             CheckMsg(properties.Data[i] != nullptr, "Texture data cannot be null");
         }
@@ -131,7 +131,7 @@ namespace vee
         imageInfo.extent.height = properties.Height;
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = 6;
+        imageInfo.arrayLayers = CUBEMAP_FACE_COUNT;
         imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -157,13 +157,13 @@ namespace vee
         viewInfo.subresourceRange.baseMipLevel = 0;
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount = 6;
+        viewInfo.subresourceRange.layerCount = CUBEMAP_FACE_COUNT;
 
         VKValidate(vkCreateImageView(VKDevice()->GetLogicalDevice()->GetVKDevice(), &viewInfo, nullptr, &m_imageView));
         VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_imageView, "TextureCubeImageView_" + properties.DebugName);
 
 		const uint32_t faceSize = properties.Width * properties.Height * properties.NumChannels;
-        const uint32_t totalBytes = faceSize * 6;
+        const uint32_t totalBytes = faceSize * CUBEMAP_FACE_COUNT;
 
         BufferProperties stagingBufferProperties{};
         stagingBufferProperties.Size = totalBytes;
@@ -174,7 +174,7 @@ namespace vee
         VulkanBuffer* stagingBuffer = new VulkanBuffer(stagingBufferProperties);
 
         void* mapped = stagingBuffer->Map();
-        for (uint32_t i = 0; i < 6; i++)
+        for (uint32_t i = 0; i < CUBEMAP_FACE_COUNT; i++)
         {
             memcpy((uint8_t*)mapped + i * faceSize, properties.Data[i], faceSize);
         }
@@ -194,7 +194,7 @@ namespace vee
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = CUBEMAP_FACE_COUNT;
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         vkCmdPipelineBarrier(commandList.GetVKCommandBuffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
@@ -206,7 +206,7 @@ namespace vee
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.mipLevel = 0;
         region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 6;
+        region.imageSubresource.layerCount = CUBEMAP_FACE_COUNT;
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = { (uint32_t)properties.Width, (uint32_t)properties.Height, 1 };
         vkCmdCopyBufferToImage(commandList.GetVKCommandBuffer(), stagingBuffer->GetVKBuffer(), m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);

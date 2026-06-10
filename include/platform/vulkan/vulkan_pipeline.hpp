@@ -31,6 +31,9 @@ namespace vee
         RefPtr<VulkanShader> FragmentShader;
         RefPtr<VertexLayout> VertexInputInfo;
         std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
+
+        bool EnableDepth = true;
+        bool Cull = true;
     };
 
     class VulkanPipeline

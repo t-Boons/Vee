@@ -41,7 +41,7 @@ namespace vee
     }
 
     VulkanBuffer::VulkanBuffer(const BufferProperties& properties)
-        : Buffer(properties)
+        : m_properties(properties)
     {
     VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferInfo.size = properties.Size;

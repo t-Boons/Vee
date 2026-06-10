@@ -14,7 +14,6 @@ namespace vee
         uint8_t StencilClearValue = 0;
         glm::vec4 ClearColor;
         VkFramebuffer RenderTarget;
-        RefPtr<VulkanPipeline> Pipeline;
         RefPtr<VulkanAttachmentLayout> AttachmentLayout;
     };
 

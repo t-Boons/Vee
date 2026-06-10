@@ -19,6 +19,8 @@
 #include "core/model_loading/model_importer.hpp"
 #include "glm/glm.hpp"
 
+#include "core/sky.hpp"
+
 #include <tinygltf/stb_image.h>
 
 
@@ -113,7 +115,8 @@ int main()
 
 	struct UnitormBufferObject
 	{
-		glm::mat4 viewProjection;
+		glm::mat4 view;
+		glm::mat4 projection;
 		glm::mat4 model;
 		glm::mat3 normalMatrix;
 	};
@@ -143,39 +146,6 @@ int main()
 	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
 	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
-	// Skybox Texture.
-	std::array<std::string, 6> faces
-	{
-		"../../../assets/textures/skybox/right.png",
-		"../../../assets/textures/skybox/left.png",
-		"../../../assets/textures/skybox/top.png",
-		"../../../assets/textures/skybox/bottom.png",
-		"../../../assets/textures/skybox/front.png",
-		"../../../assets/textures/skybox/back.png"
-	};
-
-	std::array<void*, 6> skyboxTexturePtrs;
-
-	int skyWidth, skyHeight, skyChannels;
-	for (size_t i = 0; i < faces.size(); i++)
-	{
-		int width, height, channels;
-		stbi_uc* data = stbi_load(faces[i].c_str(), &skyWidth, &skyHeight, &skyChannels, STBI_rgb_alpha);
-		skyboxTexturePtrs[i] = data;
-	}
-
-	vee::TextureCubeProperties skyboxTextureProperties{};
-	skyboxTextureProperties.Width = skyWidth;
-	skyboxTextureProperties.Height = skyHeight;
-	skyboxTextureProperties.Data = skyboxTexturePtrs;
-	skyboxTextureProperties.NumChannels = 4;
-	vee::VulkanTextureCube* skyboxTexture = new vee::VulkanTextureCube(skyboxTextureProperties);
-
-	for (uint32_t i = 0; i < 6; i++)
-	{
-		stbi_image_free(skyboxTexturePtrs[i]);
-	}
-
 	// Checkerboard texture.
 	int texWidth, texHeight, texChannels;
 
@@ -188,7 +158,7 @@ int main()
 	texture.NumChannels = 4;
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
 
-
+	stbi_image_free(pixels);
 
 	vee::VulkanSampler blockySampler;
 
@@ -210,6 +180,73 @@ int main()
 	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites, 0, nullptr);
 
 
+	vee::Sky sky;
+	sky.SetupSkybox({ {
+		"../../../assets/textures/skybox/right.png",
+		"../../../assets/textures/skybox/left.png",
+		"../../../assets/textures/skybox/top.png",
+		"../../../assets/textures/skybox/bottom.png",
+		"../../../assets/textures/skybox/front.png",
+		"../../../assets/textures/skybox/back.png"
+	} });
+
+
+
+	vee::VulkanShaderBinding skyShaderBinding;
+	skyShaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+	skyShaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	skyShaderBinding.CompileLayout();
+
+	VkDescriptorSetAllocateInfo skyDescAllocInfo{};
+	skyDescAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	skyDescAllocInfo.descriptorPool = vee::VKDevice()->GetLogicalDevice()->GetDescriptorPool();
+	skyDescAllocInfo.descriptorSetCount = 1;
+	skyDescAllocInfo.pSetLayouts = &skyShaderBinding.GetDescriptorSetLayout();
+
+	VkDescriptorSet skyDescriptorSet;
+	vkAllocateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &skyDescAllocInfo, &skyDescriptorSet);
+
+	VkDescriptorImageInfo skyboxImageInfo;
+	skyboxImageInfo.sampler = blockySampler.GetVulkanSampler();
+	skyboxImageInfo.imageView = reinterpret_cast<vee::VulkanTextureCube*>(sky.m_texture.get())->GetImageView();
+	skyboxImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet skyboxImageWriteDesc{};
+	skyboxImageWriteDesc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	skyboxImageWriteDesc.dstSet = skyDescriptorSet;
+	skyboxImageWriteDesc.dstBinding = 1;
+	skyboxImageWriteDesc.dstArrayElement = 0;
+	skyboxImageWriteDesc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	skyboxImageWriteDesc.descriptorCount = 1;
+	skyboxImageWriteDesc.pImageInfo = &skyboxImageInfo;
+
+	descriptorWrite.dstSet = skyDescriptorSet;
+
+	VkWriteDescriptorSet descriptorWrites2[] = { descriptorWrite, skyboxImageWriteDesc };
+	vkUpdateDescriptorSets(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), 2, descriptorWrites2, 0, nullptr);
+
+
+	vee::RefPtr<vee::VertexLayout> skyVertexLayout = vee::MakeRef<vee::VertexLayout>();
+	skyVertexLayout->m_bindingDescriptions = {
+		{0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX},
+	};
+	skyVertexLayout->m_attributes = {
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 }
+	};
+
+
+	vee::RefPtr<vee::VulkanShader> skyVertexShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Vertex, "../../../assets/shaders/sky.vert.spv");
+	vee::RefPtr<vee::VulkanShader> skyFragmentShader = MakeRef<vee::VulkanShader>(vee::ShaderType::Fragment, "../../../assets/shaders/sky.frag.spv");
+
+	vee::VulkanPipelineInfo skyPipelineInfo{};
+	skyPipelineInfo.VertexShader = skyVertexShader;
+	skyPipelineInfo.FragmentShader = skyFragmentShader;
+	skyPipelineInfo.VertexInputInfo = skyVertexLayout;
+	skyPipelineInfo.DescriptorSetLayouts = { skyShaderBinding.GetDescriptorSetLayout() };
+	skyPipelineInfo.Cull = false;
+	skyPipelineInfo.EnableDepth = false;
+
+	vee::RefPtr<vee::VulkanPipeline> skyPipeline = vee::MakeRef<vee::VulkanPipeline>(skyPipelineInfo);
 
 
 	vee::Input input;
@@ -255,7 +292,8 @@ int main()
 		UnitormBufferObject ubo;
 		
 		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
-		ubo.viewProjection = camera.GetCamera()->ViewProjectionMatrix();
+		ubo.view = camera.GetCamera()->ViewMatrix();
+		ubo.projection = camera.GetCamera()->ProjectionMatrix();
 		ubo.normalMatrix = glm::mat3(glm::transpose(glm::inverse(ubo.model)));
 		
 		memcpy(data, &ubo, sizeof(ubo));
@@ -280,11 +318,8 @@ int main()
 		vee::RenderPassInfo renderPassInfo{};
 		renderPassInfo.ClearColor = glm::vec4(0.1f, 0.1f, 0.5f, 1.0f);
 		renderPassInfo.RenderTarget = swapchain->GetSwapchainFrameBufferFromIndex(imageIndex);
-		renderPassInfo.Pipeline = pipeline;
 		renderPassInfo.AttachmentLayout = vee::VulkanAttachmentLayout::GetDefaultColorAttachment();
 		commandList.BeginRenderPass(renderPassInfo);
-
-		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -296,9 +331,29 @@ int main()
 		vkCmdSetViewport(commandList.GetVKCommandBuffer(), 0, 1, &viewport);
 
 		VkRect2D scissor{};
-		scissor.offset = {0, 0};
-		scissor.extent = {1280, 720};
+		scissor.offset = { 0, 0 };
+		scissor.extent = { 1280, 720 };
 		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
+
+		// Draw the skybox.
+		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline->GetPipeline());
+
+		VkDeviceSize offset = 0;
+		auto vkVertexBuffer = reinterpret_cast<vee::VulkanBuffer*>(sky.m_vertexBuffer.get());
+		VkBuffer buffers[] = { vkVertexBuffer->GetVKBuffer() };
+		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, 1, buffers, &offset);
+
+
+		auto vkIndexBuffer = reinterpret_cast<vee::VulkanBuffer*>(sky.m_indexBuffer.get());
+
+		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), vkIndexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline->GetPipelineLayout(), 0, 1, &skyDescriptorSet, 0, nullptr);
+
+		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), vkIndexBuffer->GetSize() / sizeof(uint32_t), 1, 0, 0, 0);
+
+
+		// Draw the other mesh.
+		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 
 		std::vector<VkBuffer> vertexBuffersArray;
 		for (size_t i = 0; i < vertexBuffers.size(); i++)
@@ -318,7 +373,6 @@ int main()
 		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
 		
 		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-
 
 		commandList.EndRenderPass();
 
