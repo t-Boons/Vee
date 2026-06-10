@@ -143,11 +143,43 @@ int main()
 	auto bufferInfoVulkan = uniformBuffer->GetVKDescriptorBufferInfo();
 	descriptorWrite.pBufferInfo = &bufferInfoVulkan;
 
+	// Skybox Texture.
+	std::array<std::string, 6> faces
+	{
+		"../../../assets/textures/skybox/right.png",
+		"../../../assets/textures/skybox/left.png",
+		"../../../assets/textures/skybox/top.png",
+		"../../../assets/textures/skybox/bottom.png",
+		"../../../assets/textures/skybox/front.png",
+		"../../../assets/textures/skybox/back.png"
+	};
 
+	std::array<void*, 6> skyboxTexturePtrs;
+
+	int skyWidth, skyHeight, skyChannels;
+	for (size_t i = 0; i < faces.size(); i++)
+	{
+		int width, height, channels;
+		stbi_uc* data = stbi_load(faces[i].c_str(), &skyWidth, &skyHeight, &skyChannels, STBI_rgb_alpha);
+		skyboxTexturePtrs[i] = data;
+	}
+
+	vee::TextureCubeProperties skyboxTextureProperties{};
+	skyboxTextureProperties.Width = skyWidth;
+	skyboxTextureProperties.Height = skyHeight;
+	skyboxTextureProperties.Data = skyboxTexturePtrs;
+	skyboxTextureProperties.NumChannels = 4;
+	vee::VulkanTextureCube* skyboxTexture = new vee::VulkanTextureCube(skyboxTextureProperties);
+
+	for (uint32_t i = 0; i < 6; i++)
+	{
+		stbi_image_free(skyboxTexturePtrs[i]);
+	}
+
+	// Checkerboard texture.
 	int texWidth, texHeight, texChannels;
 
 	stbi_uc* pixels = stbi_load("../../../assets/textures/checkerboard.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
 
 	vee::TextureProperties texture{};
 	texture.Width = texWidth;
@@ -155,6 +187,7 @@ int main()
 	texture.Data = pixels;
 	texture.NumChannels = 4;
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
+
 
 
 	vee::VulkanSampler blockySampler;
@@ -186,10 +219,10 @@ int main()
 
 	struct FrameData
 	{
-		vee::VulkanFence Fence = vee::VulkanFence(false);
-		vee::VulkanSemaphore PresentSemaphore;
-		vee::VulkanSemaphore RenderSemaphore;
-		vee::VulkanCommandList CommandList = vee::VulkanCommandList(vee::QueueType::Graphics);
+		vee::RefPtr<vee::VulkanFence> Fence;
+		vee::RefPtr<vee::VulkanSemaphore> PresentSemaphore;
+		vee::RefPtr<vee::VulkanSemaphore> RenderSemaphore;
+		vee::RefPtr<vee::VulkanCommandList> CommandList;
 	};
 
 
@@ -197,7 +230,16 @@ int main()
 	float lastFrameTime = 0.0f;
 	uint32_t frameIndex = 0;
 
-	FrameData frames[2];
+	std::array<vee::RefPtr<FrameData>, 2> frames;
+
+	for (size_t i = 0; i < 2; i++)
+	{
+		frames[i] = vee::RefPtr<FrameData>(new FrameData());
+		frames[i]->Fence = vee::MakeRef<vee::VulkanFence>();
+		frames[i]->PresentSemaphore = vee::MakeRef<vee::VulkanSemaphore>();
+		frames[i]->RenderSemaphore = vee::MakeRef<vee::VulkanSemaphore>();
+		frames[i]->CommandList = MakeRef<vee::VulkanCommandList>(vee::CommandListInfo{ vee::QueueType::Graphics, "Frame_" + to_string(i) });
+	}
 
 	while (!window->ShouldClose())
 	{
@@ -222,15 +264,15 @@ int main()
 		window->Update();
 		input.Poll();
 
-		FrameData* frameData = &frames[frameIndex];
+		FrameData* frameData = frames[frameIndex].get();
 
 		uint32_t imageIndex;
 		vee::VulkanFence fence;
-		VKValidate(vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore.GetVKSempahore(), fence.GetVKFence(), &imageIndex));
+		VKValidate(vkAcquireNextImageKHR(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), swapchain->GetVKSwapchain(), UINT64_MAX, frameData->RenderSemaphore->GetVKSempahore(), fence.GetVKFence(), &imageIndex));
 		fence.Wait();
 		fence.Reset();
 
-		auto& commandList = frameData->CommandList;
+		auto& commandList = *frameData->CommandList;
 		commandList.Reset();
 		commandList.Begin();
 
@@ -288,7 +330,7 @@ int main()
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &frameData->RenderSemaphore.GetVKSempahore();
+		submitInfo.pWaitSemaphores = &frameData->RenderSemaphore->GetVKSempahore();
 		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		submitInfo.pWaitDstStageMask = waitStages;
 
@@ -296,16 +338,16 @@ int main()
 		submitInfo.pCommandBuffers = &commandList.GetVKCommandBuffer();
 
 		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &frameData->PresentSemaphore.GetVKSempahore();
+		submitInfo.pSignalSemaphores = &frameData->PresentSemaphore->GetVKSempahore();
 		
-		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, frameData->Fence.GetVKFence()));
+		VKValidate(vkQueueSubmit(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), 1, &submitInfo, frameData->Fence->GetVKFence()));
 
 		// Present the frame.
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &frameData->PresentSemaphore.GetVKSempahore();
+		presentInfo.pWaitSemaphores = &frameData->PresentSemaphore->GetVKSempahore();
 		
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &swapchain->GetVKSwapchain();
@@ -314,8 +356,8 @@ int main()
 
 		VKValidate(vkQueuePresentKHR(vee::VKDevice()->GetLogicalDevice()->GetQueue(vee::QueueType::Graphics), &presentInfo));
 
-		frameData->Fence.Wait();
-		frameData->Fence.Reset();
+		frameData->Fence->Wait();
+		frameData->Fence->Reset();
 
 		frameIndex = (frameIndex + 1) % 2;
 	}

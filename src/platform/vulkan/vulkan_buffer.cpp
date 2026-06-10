@@ -54,6 +54,7 @@ namespace vee
     allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
     VKValidate(vmaCreateBuffer(VKDevice()->GetAllocator(), &bufferInfo, &allocInfo, &m_buffer, &m_allocation, nullptr));
+	VKDevice()->DebugNameResource(VK_OBJECT_TYPE_BUFFER, (uint64_t)m_buffer, "Buffer_" + properties.DebugName);
 
     // If GPU only create a staging buffer to upload data.
     if (m_properties.MemoryType == MemoryType::Static)
@@ -63,12 +64,13 @@ namespace vee
         BufferProperties stagingBufferProperties = m_properties;
         stagingBufferProperties.MemoryType = MemoryType::Dynamic;
         stagingBufferProperties.Usage = BufferUsage::TransferSrc;
+        stagingBufferProperties.DebugName = "Straging_" + properties.DebugName;
         VulkanBuffer *stagingBuffer = new VulkanBuffer(stagingBufferProperties);
         void *stagingBufferData = stagingBuffer->Map();
         memcpy(stagingBufferData, m_properties.Data, m_properties.Size);
         stagingBuffer->UnMap();
 
-        VulkanCommandList list(QueueType::Graphics);
+        VulkanCommandList list({ QueueType::Graphics, "Straging_" + properties.DebugName });
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

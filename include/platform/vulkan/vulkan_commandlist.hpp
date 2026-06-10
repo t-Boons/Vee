@@ -18,10 +18,16 @@ namespace vee
         RefPtr<VulkanAttachmentLayout> AttachmentLayout;
     };
 
+	struct CommandListInfo
+	{
+        QueueType Type = QueueType::Graphics;
+		std::string DebugName = "CommandList";
+	};
+
     class VulkanCommandList
     {
     public:
-        VulkanCommandList(QueueType type);
+        VulkanCommandList(CommandListInfo props = CommandListInfo());
         ~VulkanCommandList();
 
         void Reset();
@@ -36,6 +42,6 @@ namespace vee
         VkCommandBuffer& GetVKCommandBuffer() { return m_commandBuffer; }
     private:
         VkCommandBuffer m_commandBuffer;
-        QueueType m_type;
+        CommandListInfo m_properties;
     };
 }

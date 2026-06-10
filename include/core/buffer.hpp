@@ -27,6 +27,7 @@ namespace vee
         void* Data = nullptr;
         BufferUsage Usage;
         MemoryType MemoryType;
+		std::string DebugName = "Buffer";
     };
 
 	class Buffer : public NonCopyable

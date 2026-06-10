@@ -3,21 +3,22 @@
 
 namespace vee
 {
-    VulkanCommandList::VulkanCommandList(QueueType type)
-    : m_type(type)
+    VulkanCommandList::VulkanCommandList(CommandListInfo props)
+    : m_properties(props)
     {
 	    VkCommandBufferAllocateInfo allocInfo{};
 	    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	    allocInfo.commandPool = VKDevice()->GetLogicalDevice()->GetCommandPool(type);
+	    allocInfo.commandPool = VKDevice()->GetLogicalDevice()->GetCommandPool(props.Type);
 	    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	    allocInfo.commandBufferCount = 1;
 
 	    VKValidate(vkAllocateCommandBuffers(VKDevice()->GetLogicalDevice()->GetVKDevice(), &allocInfo, &m_commandBuffer));
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_commandBuffer, "CommandList_" + m_properties.DebugName);
     }
 
     VulkanCommandList::~VulkanCommandList()
     {
-        vkFreeCommandBuffers(VKDevice()->GetLogicalDevice()->GetVKDevice(), VKDevice()->GetLogicalDevice()->GetCommandPool(m_type), 1, &m_commandBuffer);
+        vkFreeCommandBuffers(VKDevice()->GetLogicalDevice()->GetVKDevice(), VKDevice()->GetLogicalDevice()->GetCommandPool(m_properties.Type), 1, &m_commandBuffer);
     }
 
     void VulkanCommandList::Reset()
