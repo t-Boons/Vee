@@ -26,6 +26,8 @@ namespace vee
         createInfo.pCode = reinterpret_cast<const uint32_t*>(m_spirvCode.data());
 
         VKValidate(vkCreateShaderModule(VKDevice()->GetLogicalDevice()->GetVKDevice(), &createInfo, nullptr, &m_shaderModule));
+		std::string shaderName = std::filesystem::path(filepath).stem().string();
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_SHADER_MODULE, (uint64_t)m_shaderModule, "Shader_" + shaderName);  
 
         VkShaderStageFlagBits stage = VK_SHADER_STAGE_ALL;
         switch (type)

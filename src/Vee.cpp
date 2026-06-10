@@ -112,6 +112,7 @@ int main()
 		const std::vector<glm::vec3> vertices = importer->Meshes()[0]->m_positions[0];
 		bufferProperties.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
 		bufferProperties.Data = (void*)vertices.data();
+		bufferProperties.DebugName = "HelmetVertices";
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
 	}
 
@@ -119,7 +120,7 @@ int main()
 		vee::BufferProperties bufferProperties{};
 		bufferProperties.Usage = vee::BufferUsage::Vertex;
 		bufferProperties.MemoryType = vee::MemoryType::Static;
-
+		bufferProperties.DebugName = "HelmetNormals";
 		const std::vector<glm::vec3> normals = importer->Meshes()[0]->m_normals[0];
 
 		bufferProperties.Size = (uint32_t)sizeof(normals[0]) * (uint32_t)normals.size();
@@ -134,6 +135,7 @@ int main()
 		const std::vector<glm::vec2> texcoords = importer->Meshes()[0]->m_texcoords[0];
 		bufferProperties.Size = (uint32_t)sizeof(texcoords[0]) * (uint32_t)texcoords.size();
 		bufferProperties.Data = (void*)texcoords.data();
+		bufferProperties.DebugName = "HelmetUVs";
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
 	}
 
@@ -144,6 +146,7 @@ int main()
 		const std::vector<glm::vec4> tangents = importer->Meshes()[0]->m_tangents[0];
 		bufferProperties.Size = (uint32_t)sizeof(tangents[0]) * (uint32_t)tangents.size();
 		bufferProperties.Data = (void*)tangents.data();
+		bufferProperties.DebugName = "HelmetTangents";
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
 	}
 
@@ -154,12 +157,14 @@ int main()
 		const std::vector<glm::vec3> bitangents = importer->Meshes()[0]->m_bitangents[0];
 		bufferProperties.Size = (uint32_t)sizeof(bitangents[0]) * (uint32_t)bitangents.size();
 		bufferProperties.Data = (void*)bitangents.data();
+		bufferProperties.DebugName = "HelmetBitangents";
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
 	}
 
 	vee::BufferProperties indexBufferProperties{};
 	indexBufferProperties.Usage = vee::BufferUsage::Index;
 	indexBufferProperties.MemoryType = vee::MemoryType::Static;
+	indexBufferProperties.DebugName = "HelmetIndices";
 
 	const std::vector<uint32_t> indices = importer->Meshes()[0]->m_indices[0];
 
@@ -181,6 +186,7 @@ int main()
 	pipelineInfo.FragmentShader = fragmentShader;
 	pipelineInfo.VertexInputInfo = vertexLayout;
 	pipelineInfo.DescriptorSetLayouts = {shaderBinding.GetDescriptorSetLayout()};
+	pipelineInfo.DebugName = "Helmet";
 
 	vee::RefPtr<vee::VulkanPipeline> pipeline = vee::MakeRef<vee::VulkanPipeline>(pipelineInfo);
 
@@ -201,6 +207,7 @@ int main()
 	bufferInfo2.Size = sizeof(UniformBufferObject);
 	bufferInfo2.Usage = vee::BufferUsage::Uniform;
 	bufferInfo2.MemoryType = vee::MemoryType::Dynamic;
+	bufferInfo2.DebugName = "UniformViewData";
 	vee::VulkanBuffer* uniformBuffer = new vee::VulkanBuffer(bufferInfo2);
 
 	VkDescriptorSetAllocateInfo allocInfo{};
@@ -218,24 +225,28 @@ int main()
 	texture.Height = importer->Materials()[0]->m_colorTexture->m_height;
 	texture.Data = importer->Materials()[0]->m_colorTexture->m_image.data();
 	texture.NumChannels = 4;
+	texture.DebugName = "HelmetDiffuse";
 	vee::VulkanTexture* diffuseTexture = new vee::VulkanTexture(texture);
 
 	texture.Width = importer->Materials()[0]->m_normalTexture->m_width;
 	texture.Height = importer->Materials()[0]->m_normalTexture->m_height;
 	texture.Data = importer->Materials()[0]->m_normalTexture->m_image.data();
 	texture.NumChannels = 4;
+	texture.DebugName = "HelmetNormal";
 	vee::VulkanTexture* normalTexture = new vee::VulkanTexture(texture);
 
 	texture.Width = importer->Materials()[0]->m_metallicRoughnessTexture->m_width;
 	texture.Height = importer->Materials()[0]->m_metallicRoughnessTexture->m_height;
 	texture.Data = importer->Materials()[0]->m_metallicRoughnessTexture->m_image.data();
 	texture.NumChannels = 4;
+	texture.DebugName = "HelmetMetallicRoughness";
 	vee::VulkanTexture* metallicRoughnessTexture = new vee::VulkanTexture(texture);
 
 	texture.Width = importer->Materials()[0]->m_emissionTexture->m_width;
 	texture.Height = importer->Materials()[0]->m_emissionTexture->m_height;
 	texture.Data = importer->Materials()[0]->m_emissionTexture->m_image.data();
 	texture.NumChannels = 4;
+	texture.DebugName = "HelmetEmission";
 	vee::VulkanTexture* emissionTexture = new vee::VulkanTexture(texture);
 
 	vee::VulkanSampler blockySampler;

@@ -91,6 +91,7 @@ namespace vee
 			vertexBufferProperties.MemoryType = MemoryType::Static;
 			vertexBufferProperties.Size = sizeof(vertices);
 			vertexBufferProperties.Data = vertices;
+			vertexBufferProperties.DebugName = "SkyboxVertices";
 			m_vertexBuffer = Buffer::Create(vertexBufferProperties);
 
 			BufferProperties indexBufferProperties{};
@@ -98,6 +99,7 @@ namespace vee
 			indexBufferProperties.MemoryType = MemoryType::Static;
 			indexBufferProperties.Size = sizeof(indices);
 			indexBufferProperties.Data = indices;
+			indexBufferProperties.DebugName = "SkyboxIndices";
 			m_indexBuffer = Buffer::Create(indexBufferProperties);
 		}
 	}

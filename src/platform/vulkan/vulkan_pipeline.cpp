@@ -159,11 +159,14 @@ namespace vee
 
         
         VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_PIPELINE_LAYOUT, reinterpret_cast<uint64_t>(m_pipelineLayout), "PipelineLayout_" + info.DebugName);
 
         pipelineInfo.layout = m_pipelineLayout;
         pipelineInfo.renderPass =  VulkanAttachmentLayout::GetDefaultColorAttachment()->GetRenderPass();
 
+
 	    VKValidate(vkCreateGraphicsPipelines(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline));
+		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_PIPELINE, reinterpret_cast<uint64_t>(m_graphicsPipeline), "Pipeline_" + info.DebugName);
     }
 
     VulkanPipeline::~VulkanPipeline()

@@ -34,6 +34,8 @@ namespace vee
 
         bool EnableDepth = true;
         bool Cull = true;
+
+        std::string DebugName = "Unnamed";
     };
 
     class VulkanPipeline
