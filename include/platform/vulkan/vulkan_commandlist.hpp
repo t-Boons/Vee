@@ -10,6 +10,8 @@ namespace vee
 {
     struct RenderPassInfo
     {
+        float DepthClearValue = 1.0f;
+        uint8_t StencilClearValue = 0;
         glm::vec4 ClearColor;
         VkFramebuffer RenderTarget;
         RefPtr<VulkanPipeline> Pipeline;

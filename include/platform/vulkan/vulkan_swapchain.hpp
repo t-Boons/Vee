@@ -20,5 +20,10 @@ namespace vee
         std::array<VkImage, 2> m_swapChainImages;
         std::array<VkImageView, 2> m_swapChainImageViews;
         std::array<VkFramebuffer, 2> m_swapChainFrameBuffers;
+
+        std::array<VkImage, 2> m_swapChainDepthImages;
+        std::array<VkImageView, 2> m_swapChainDepthImageViews;
+        std::array<VkFramebuffer, 2> m_swapChainDepthFrameBuffers;
+		std::array<VmaAllocation, 2> m_swapChainDepthImageAllocations;
     };
 }

@@ -100,6 +100,18 @@ namespace vee
         return inputAssembly;
     }
 
+	VkPipelineDepthStencilStateCreateInfo CreateDefaultDepthStencil()
+	{
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE;
+		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencil.depthBoundsTestEnable = VK_FALSE;
+		depthStencil.stencilTestEnable = VK_FALSE;
+		return depthStencil;
+	}
+
 
     VulkanPipeline::VulkanPipeline(const VulkanPipelineInfo& info)
     {
@@ -113,6 +125,8 @@ namespace vee
         VkPipelineColorBlendStateCreateInfo colorBlending = CreateDefaultColorBlending(colorBlendAttachment);
         VkPipelineMultisampleStateCreateInfo multisampling = CreateDefaultMultisampling();
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = CreateDefaultInputAssembly();
+		VkPipelineDepthStencilStateCreateInfo depthStencil = CreateDefaultDepthStencil();
+
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -127,7 +141,7 @@ namespace vee
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
-        pipelineInfo.pDepthStencilState = nullptr;
+        pipelineInfo.pDepthStencilState = &depthStencil;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
 

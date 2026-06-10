@@ -55,8 +55,14 @@ namespace vee
         clearColor.color.float32[2] = info.ClearColor.b;
         clearColor.color.float32[3] = info.ClearColor.a;
 
-        renderPassBeginInfo.clearValueCount = 1;
-        renderPassBeginInfo.pClearValues = &clearColor;
+        VkClearValue clearDepth = {};
+        clearDepth.depthStencil.depth = info.DepthClearValue;
+        clearDepth.depthStencil.stencil = info.StencilClearValue;
+
+        renderPassBeginInfo.clearValueCount = 2;
+
+		VkClearValue clearValues[] = { clearColor, clearDepth };
+        renderPassBeginInfo.pClearValues = clearValues;
 
         vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     }

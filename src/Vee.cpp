@@ -56,18 +56,17 @@ int main()
 
 	std::vector<vee::RefPtr<vee::VulkanBuffer>> vertexBuffers;
 
+
+	vee::RefPtr<vee::ModelImporter> importer = vee::ModelImporter::Create("../../../assets/models/damagedhelmet/Damagedhelmet.gltf");
+	importer->Load();
+
+
 	{
 		vee::BufferProperties bufferProperties{};
 		bufferProperties.Usage = vee::BufferUsage::Vertex;
 		bufferProperties.MemoryType = vee::MemoryType::Static;
 
-		const std::vector<glm::vec3> vertices = 
-		{
-			{-0.5f, -0.5f, 0.0f},
-			{0.5f, -0.5f, 0.0f},
-			{0.5f, 0.5f, 0.0f},
-			{-0.5f, 0.5f, 0.0f}
-		};
+		const std::vector<glm::vec3> vertices = importer->Meshes()[0]->m_positions[0];
 		bufferProperties.Size = (uint32_t)sizeof(vertices[0]) * (uint32_t)vertices.size();
 		bufferProperties.Data = (void*)vertices.data();
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
@@ -78,13 +77,8 @@ int main()
 		bufferProperties.Usage = vee::BufferUsage::Vertex;
 		bufferProperties.MemoryType = vee::MemoryType::Static;
 
-		const std::vector<glm::vec2> uvs = 
-		{
-			{0.0f, 0.0f},
-			{1.0f, 0.0f},
-			{1.0f, 1.0f},
-			{0.0f, 1.0f}
-		};
+		const std::vector<glm::vec2> uvs = importer->Meshes()[0]->m_texcoords[0];
+
 		bufferProperties.Size = (uint32_t)sizeof(uvs[0]) * (uint32_t)uvs.size();
 		bufferProperties.Data = (void*)uvs.data();
 		vertexBuffers.push_back(MakeRef<vee::VulkanBuffer>(bufferProperties));
@@ -94,11 +88,8 @@ int main()
 	indexBufferProperties.Usage = vee::BufferUsage::Index;
 	indexBufferProperties.MemoryType = vee::MemoryType::Static;
 
-	const std::vector<uint32_t> indices = 
-	{
-		0, 1, 2,
-		2, 3, 0
-	};
+	const std::vector<uint32_t> indices = importer->Meshes()[0]->m_indices[0];
+
 	indexBufferProperties.Size = (uint32_t)sizeof(indices[0]) * (uint32_t)indices.size();
 	indexBufferProperties.Data = (void*)indices.data();
 	vee::VulkanBuffer* indexBuffer = new vee::VulkanBuffer(indexBufferProperties);
