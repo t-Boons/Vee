@@ -11,7 +11,9 @@ namespace vee
 
         VkInstance& GetVkInstance() { return m_instance; }
 
+
     private:
+        VkDebugUtilsMessengerEXT m_debugMessenger;
         VkInstance m_instance;
     };
 }

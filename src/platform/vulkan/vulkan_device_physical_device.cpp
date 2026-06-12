@@ -52,7 +52,7 @@ namespace vee
         for (const auto &device : devices)
         {
             const int score = RatePhysicalDevice(device);
-            if (IsPhysicalDeviceSuitable(device) && score > bestScore)
+            if (score > bestScore)
             {
                 m_physicalDevice = device;
                 vkGetPhysicalDeviceProperties(device, &m_deviceProperties);
