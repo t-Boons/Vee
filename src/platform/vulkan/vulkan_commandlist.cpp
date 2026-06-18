@@ -57,6 +57,23 @@ namespace vee
         vkCmdBeginRendering(m_commandBuffer, &renderInfo);
     }
 
+    void VulkanCommandList::SetViewport(const glm::vec3& size)
+    {
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = size.x;
+        viewport.height = size.y;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = size.z;
+        vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = { static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y) };
+        vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
+    }
+
     void VulkanCommandList::EndRender()
     {
         vkCmdEndRendering(m_commandBuffer);

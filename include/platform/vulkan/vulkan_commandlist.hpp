@@ -36,6 +36,7 @@ namespace vee
         void BeginRender(const RenderPassInfo& info);
         void EndRender();
 
+        void SetViewport(const glm::vec3& size);
 
         VkCommandBuffer& GetVKCommandBuffer() { return m_commandBuffer; }
     private:

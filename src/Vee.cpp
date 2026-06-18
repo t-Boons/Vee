@@ -430,9 +430,6 @@ int main()
 
 		Transition(commandList, swapchain->GetSwapChainImage(imageIndex), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-		vee::RenderPassInfo renderPassInfo{};
-		renderPassInfo.ClearColor = glm::vec4(0.1f, 0.1f, 0.5f, 1.0f);
-
 
 		VkRenderingAttachmentInfo rtInfo{};
 		rtInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -440,7 +437,7 @@ int main()
 		rtInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		rtInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		rtInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		rtInfo.clearValue = { 0.0f, 0.05f, 0.2f, 0.0f };
+		rtInfo.clearValue.color = { 0.0f, 0.05f, 0.2f, 0.0f };
 
 		VkRenderingAttachmentInfo rtInfod{};
 		rtInfod.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -450,24 +447,12 @@ int main()
 		rtInfod.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		rtInfod.clearValue.depthStencil.depth = 1.0f;
 
+		vee::RenderPassInfo renderPassInfo{};
 		renderPassInfo.ColorAttachments.push_back(rtInfo);
 		renderPassInfo.DepthAttachment = rtInfod;
 		commandList.BeginRender(renderPassInfo);
 
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = 1280.0f;
-		viewport.height = 720.0f;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandList.GetVKCommandBuffer(), 0, 1, &viewport);
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = { 1280, 720 };
-		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
-		
+		commandList.SetViewport({ 1280, 720, 1 });
 
 		// Draw the skybox.
 		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline->GetPipeline());
