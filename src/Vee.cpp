@@ -501,7 +501,7 @@ int main()
 			offsets.push_back(0);
 		}
 
-		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, vertexBuffersArray.size(), vertexBuffersArray.data(), offsets.data());
+		vkCmdBindVertexBuffers(commandList.GetVKCommandBuffer(), 0, static_cast<uint32_t>(vertexBuffersArray.size()), vertexBuffersArray.data(), offsets.data());
 		
 		vkCmdBindIndexBuffer(commandList.GetVKCommandBuffer(), indexBuffer->GetVKBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
