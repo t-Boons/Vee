@@ -1897,6 +1897,3 @@ static void DegenEpilogue(STSpace psTspace[], STriInfo pTriInfos[], int piTriLis
 		}
 	}
 }
-
-
-#pragma clang diagnostic pop

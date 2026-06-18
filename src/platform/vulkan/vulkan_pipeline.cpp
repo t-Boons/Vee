@@ -1,6 +1,5 @@
 #include "platform/vulkan/vulkan_pipeline.hpp"
 #include "platform/vulkan/vulkan_device.hpp"
-#include "platform/vulkan/vulkan_attachment_layout.hpp"
 
 namespace vee
 {
@@ -157,13 +156,22 @@ namespace vee
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
+        VkFormat colorFormat = VK_FORMAT_B8G8R8A8_SRGB;
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+        VkPipelineRenderingCreateInfo renderingInfo{};
+        renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        renderingInfo.colorAttachmentCount = 1;
+        renderingInfo.pColorAttachmentFormats = &colorFormat;
+        renderingInfo.depthAttachmentFormat = depthFormat;
+        renderingInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+        pipelineInfo.pNext = &renderingInfo;
+
         
         VKValidate(vkCreatePipelineLayout(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout));
 		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_PIPELINE_LAYOUT, reinterpret_cast<uint64_t>(m_pipelineLayout), "PipelineLayout_" + info.DebugName);
 
         pipelineInfo.layout = m_pipelineLayout;
-        pipelineInfo.renderPass =  VulkanAttachmentLayout::GetDefaultColorAttachment()->GetRenderPass();
-
 
 	    VKValidate(vkCreateGraphicsPipelines(vee::VKDevice()->GetLogicalDevice()->GetVKDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline));
 		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_PIPELINE, reinterpret_cast<uint64_t>(m_graphicsPipeline), "Pipeline_" + info.DebugName);

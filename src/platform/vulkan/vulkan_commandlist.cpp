@@ -41,35 +41,24 @@ namespace vee
         VKValidate(vkEndCommandBuffer(m_commandBuffer));
     }
 
-    void VulkanCommandList::BeginRenderPass(const RenderPassInfo& info)
+    void VulkanCommandList::BeginRender(const RenderPassInfo& info)
     {
-        VkRenderPassBeginInfo renderPassBeginInfo{};
-        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassBeginInfo.renderPass = info.AttachmentLayout->GetRenderPass();
-        renderPassBeginInfo.framebuffer = info.RenderTarget;
-        renderPassBeginInfo.renderArea.offset = {0, 0};
-        renderPassBeginInfo.renderArea.extent = {1280, 720};
+        VkRenderingInfo renderInfo{};
+		renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        renderInfo.renderArea = {
+            .offset = {0, 0},
+            .extent = {1280, 720}
+        };
+        renderInfo.layerCount = 1;
+        renderInfo.colorAttachmentCount = static_cast<uint32_t>(info.ColorAttachments.size());
+        renderInfo.pColorAttachments = info.ColorAttachments.data();
+        renderInfo.pDepthAttachment = &info.DepthAttachment;
 
-        VkClearValue clearColor = {};
-        clearColor.color.float32[0] = info.ClearColor.r;
-        clearColor.color.float32[1] = info.ClearColor.g;
-        clearColor.color.float32[2] = info.ClearColor.b;
-        clearColor.color.float32[3] = info.ClearColor.a;
-
-        VkClearValue clearDepth = {};
-        clearDepth.depthStencil.depth = info.DepthClearValue;
-        clearDepth.depthStencil.stencil = info.StencilClearValue;
-
-        renderPassBeginInfo.clearValueCount = 2;
-
-		VkClearValue clearValues[] = { clearColor, clearDepth };
-        renderPassBeginInfo.pClearValues = clearValues;
-
-        vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRendering(m_commandBuffer, &renderInfo);
     }
 
-    void VulkanCommandList::EndRenderPass()
+    void VulkanCommandList::EndRender()
     {
-        vkCmdEndRenderPass(m_commandBuffer);
+        vkCmdEndRendering(m_commandBuffer);
     }
 }

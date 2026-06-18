@@ -27,6 +27,13 @@ namespace vee
             VkPhysicalDeviceFeatures deviceFeatures{};
             createInfo.pEnabledFeatures = &deviceFeatures;
 
+            VkPhysicalDeviceVulkan13Features features{};
+            features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+            features.dynamicRendering = VK_TRUE;    
+            features.synchronization2 = VK_TRUE;
+
+            createInfo.pNext = &features;
+
             const std::vector<const char*> requiredDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
             createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
             createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();

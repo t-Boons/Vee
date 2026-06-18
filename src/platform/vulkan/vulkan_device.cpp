@@ -24,7 +24,7 @@ namespace vee
         allocatorInfo.instance = m_instance->GetVkInstance();
         allocatorInfo.physicalDevice = m_physicalDevice->GetVKPhysicalDevice();
         allocatorInfo.device = m_device->GetVKDevice();
-        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_4;
+        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
 
         vmaCreateAllocator(&allocatorInfo, &m_allocator);
     }

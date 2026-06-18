@@ -46,6 +46,10 @@ namespace vee
 
         uint32_t imageCount = 2;
         VKValidate(vkGetSwapchainImagesKHR(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_swapchain, &imageCount, m_swapChainImages.data()));
+        for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
+        {
+            VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE, (uint64_t)m_swapChainImages[i], "SwapchainImage_" + std::to_string(i));
+        }
 
 
         for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
@@ -106,73 +110,6 @@ namespace vee
             VKValidate(vkCreateImageView(VKDevice()->GetLogicalDevice()->GetVKDevice(), &depthViewInfo, nullptr, &m_swapChainDepthImageViews[i]));
 			VKDevice()->DebugNameResource(VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_swapChainDepthImageViews[i], "SwapchainDepthImageView_" + std::to_string(i));
         }
-
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = VK_FORMAT_B8G8R8A8_SRGB;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentDescription depthAttachment{};
-        depthAttachment.format = VK_FORMAT_D32_SFLOAT;
-        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthAttachmentRef{};
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-        subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-        VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 2;
-        renderPassInfo.pAttachments = attachments;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-
-        VKValidate(vkCreateRenderPass(VKDevice()->GetLogicalDevice()->GetVKDevice(), &renderPassInfo, nullptr, &m_swapchainRenderPass));
-		VKDevice()->DebugNameResource(VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)m_swapchainRenderPass, "SwapchainRenderPass");
-
-        // Framebuffers
-        for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
-        {
-            VkImageView attachments[] = {
-                m_swapChainImageViews[i],
-                m_swapChainDepthImageViews[i]
-            };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = m_swapchainRenderPass;
-            framebufferInfo.attachmentCount = 2;
-            framebufferInfo.pAttachments = attachments;
-            framebufferInfo.width = window.Width();
-            framebufferInfo.height = window.Height();
-            framebufferInfo.layers = 1;
-
-            VKValidate(vkCreateFramebuffer(VKDevice()->GetLogicalDevice()->GetVKDevice(), &framebufferInfo, nullptr, &m_swapChainFrameBuffers[i]));
-            VKDevice()->DebugNameResource(VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)m_swapChainFrameBuffers[i], "SwapchainFramebuffer_" + std::to_string(i));
-        }
     }
 
     VulkanSwapchain::~VulkanSwapchain()
@@ -180,7 +117,6 @@ namespace vee
         for (uint32_t i = 0; i < 2; i++)
         {
             vkDestroyImageView(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_swapChainImageViews[i], nullptr);
-            vkDestroyFramebuffer(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_swapChainFrameBuffers[i], nullptr);
         }
 
         vkDestroySwapchainKHR(VKDevice()->GetLogicalDevice()->GetVKDevice(), m_swapchain, nullptr);

@@ -60,7 +60,7 @@ namespace vee
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "Vee Engine";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        appInfo.apiVersion = VK_API_VERSION_1_3;
     }
 
     void PopulateDebugUtilsMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
@@ -84,7 +84,6 @@ namespace vee
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         extensions = std::vector<const char *>(glfwExtensions, glfwExtensions + glfwExtensionCount);
-        
         if (validationLayers)
         {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

@@ -12,7 +12,6 @@
 #include "platform/vulkan/vulkan_commandlist.hpp"
 #include "platform/vulkan/vulkan_semaphore.hpp"
 #include "platform/vulkan/vulkan_shader_binding.hpp"
-#include "platform/vulkan/vulkan_attachment_layout.hpp"
 #include "platform/vulkan/vulkan_texture.hpp"
 #include "core/input/input.hpp"
 #include "core/spectator_camera.hpp"
@@ -58,6 +57,35 @@ Binding* CreateBufferBinding(uint32_t binding, VkDescriptorType type, VkBuffer b
 	result->Write.pBufferInfo = new VkDescriptorBufferInfo{ buffer, offset, range };
 	result->Write.dstSet = descriptorSet;
 	return result;
+}
+
+
+void Transition(vee::VulkanCommandList& list, VkImage& image, VkImageLayout before, VkImageLayout after, bool isDepth = false)
+{
+	VkImageMemoryBarrier2 barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	barrier.srcAccessMask = 0;
+
+	barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+
+	barrier.oldLayout = before;
+	barrier.newLayout = after;
+
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	VkDependencyInfo dependency{};
+	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+	dependency.imageMemoryBarrierCount = 1;
+	dependency.pImageMemoryBarriers = &barrier;
+
+	vkCmdPipelineBarrier2(list.GetVKCommandBuffer(), &dependency);
 }
 
 
@@ -349,9 +377,11 @@ int main()
 		frames[i]->CommandList = MakeRef<vee::VulkanCommandList>(vee::CommandListInfo{ vee::QueueType::Graphics, "Frame_" + to_string(i) });
 	}
 
+	uint32_t frameNumber = 0;
 	float time = 0.0f;
 	while (!window->ShouldClose())
 	{
+		frameNumber++;
 		float deltaTime = newFrameTime - lastFrameTime;
 		lastFrameTime = newFrameTime;
 		newFrameTime = (float)glfwGetTime();
@@ -392,12 +422,37 @@ int main()
 		commandList.Reset();
 		commandList.Begin();
 
+		if (frameNumber == 1 || frameNumber == 2)
+		{
+			Transition(commandList, swapchain->GetSwapChainImage(imageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			Transition(commandList, swapchain->GetDepthImage(imageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, true);
+		}
+
+		Transition(commandList, swapchain->GetSwapChainImage(imageIndex), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		vee::RenderPassInfo renderPassInfo{};
 		renderPassInfo.ClearColor = glm::vec4(0.1f, 0.1f, 0.5f, 1.0f);
-		renderPassInfo.RenderTarget = swapchain->GetSwapchainFrameBufferFromIndex(imageIndex);
-		renderPassInfo.AttachmentLayout = vee::VulkanAttachmentLayout::GetDefaultColorAttachment();
-		commandList.BeginRenderPass(renderPassInfo);
+
+
+		VkRenderingAttachmentInfo rtInfo{};
+		rtInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		rtInfo.imageView = swapchain->GetSwapChainImageView(imageIndex);
+		rtInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		rtInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		rtInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		rtInfo.clearValue = { 0.0f, 0.05f, 0.2f, 0.0f };
+
+		VkRenderingAttachmentInfo rtInfod{};
+		rtInfod.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		rtInfod.imageView = swapchain->GetDepthImageView(imageIndex);
+		rtInfod.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+		rtInfod.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		rtInfod.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		rtInfod.clearValue.depthStencil.depth = 1.0f;
+
+		renderPassInfo.ColorAttachments.push_back(rtInfo);
+		renderPassInfo.DepthAttachment = rtInfod;
+		commandList.BeginRender(renderPassInfo);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -412,6 +467,7 @@ int main()
 		scissor.offset = { 0, 0 };
 		scissor.extent = { 1280, 720 };
 		vkCmdSetScissor(commandList.GetVKCommandBuffer(), 0, 1, &scissor);
+		
 
 		// Draw the skybox.
 		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline->GetPipeline());
@@ -428,8 +484,8 @@ int main()
 		vkCmdBindDescriptorSets(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, skyPipeline->GetPipelineLayout(), 0, 1, &skyDescriptorSet, 0, nullptr);
 
 		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), vkIndexBuffer->GetSize() / sizeof(uint32_t), 1, 0, 0, 0);
-
-
+		
+		
 		// Draw the other mesh.
 		vkCmdBindPipeline(commandList.GetVKCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 
@@ -452,10 +508,13 @@ int main()
 		
 		vkCmdDrawIndexed(commandList.GetVKCommandBuffer(), static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-		commandList.EndRenderPass();
+
+		
+		commandList.EndRender();
+
+		Transition(commandList, swapchain->GetSwapChainImage(imageIndex), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 		commandList.End();
-
 
 		// Queue render work.
 		VkSubmitInfo submitInfo{};

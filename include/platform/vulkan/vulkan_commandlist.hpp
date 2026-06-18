@@ -3,7 +3,6 @@
 #include "vulkan_common.hpp"
 #include "vulkan_device_logical_device.hpp"
 #include "vulkan_pipeline.hpp"
-#include "vulkan_attachment_layout.hpp"
 #include <glm/glm.hpp>
 
 namespace vee
@@ -13,8 +12,8 @@ namespace vee
         float DepthClearValue = 1.0f;
         uint8_t StencilClearValue = 0;
         glm::vec4 ClearColor;
-        VkFramebuffer RenderTarget;
-        RefPtr<VulkanAttachmentLayout> AttachmentLayout;
+        std::vector<VkRenderingAttachmentInfo> ColorAttachments;
+        VkRenderingAttachmentInfo DepthAttachment;
     };
 
 	struct CommandListInfo
@@ -34,8 +33,8 @@ namespace vee
         void Begin();
         void End();
 
-        void BeginRenderPass(const RenderPassInfo& info);
-        void EndRenderPass();
+        void BeginRender(const RenderPassInfo& info);
+        void EndRender();
 
 
         VkCommandBuffer& GetVKCommandBuffer() { return m_commandBuffer; }
