@@ -160,7 +160,7 @@ namespace vee
 				m_indexBuffer = new VulkanBuffer(bp);
 			}
 
-			// --- Shader bindings & pipeline ---
+
 			m_shaderBinding.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 			m_shaderBinding.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			m_shaderBinding.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -187,8 +187,7 @@ namespace vee
 				m_uniformBuffer = new VulkanBuffer(bp);
 			}
 
-			// --- Descriptor set ---
-			// TODO: get device from layer system
+
 			VkDescriptorSetAllocateInfo allocInfo{};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 			allocInfo.descriptorPool = VKDevice()->GetLogicalDevice()->GetDescriptorPool();
@@ -264,10 +263,10 @@ namespace vee
 				uniformBinding->Write, diffuseBinding->Write, normalBinding->Write,
 				metallicRoughnessBinding->Write, emissionBinding->Write, skyboxImageBindingForModel->Write
 			};
-			// TODO: get device from layer system
+
 			vkUpdateDescriptorSets(VKDevice()->GetLogicalDevice()->GetVKDevice(), 6, modelWrites, 0, nullptr);
 
-			// --- Sky pipeline ---
+
 			m_skyVertexShader = MakeRef<VulkanShader>(ShaderType::Vertex, "../../../assets/shaders/sky.vert.spv");
 			m_skyFragmentShader = MakeRef<VulkanShader>(ShaderType::Fragment, "../../../assets/shaders/sky.frag.spv");
 
@@ -284,8 +283,7 @@ namespace vee
 			skyPipelineInfo.EnableDepth = false;
 			m_skyPipeline = MakeRef<VulkanPipeline>(skyPipelineInfo);
 
-			// --- Input & camera ---
-			// TODO: get window from layer system
+
 			m_input.Init(Application::Get()->GetWindow().get());
 
 			// --- Frame data ---
@@ -325,14 +323,14 @@ namespace vee
 			memcpy(data, &ubo, sizeof(ubo));
 			m_uniformBuffer->UnMap();
 
-			// TODO: get window from layer system
+
 			m_input.Poll();
 
 			FrameData* frameData = m_frames[m_frameIndex].get();
 
 			uint32_t imageIndex;
 			VulkanFence fence;
-			// TODO: get device from layer system
+
 			VKValidate(vkAcquireNextImageKHR(VKDevice()->GetLogicalDevice()->GetVKDevice(),
 				VKDevice()->GetSwapchain()->GetVKSwapchain(), UINT64_MAX,
 				frameData->RenderSemaphore->GetVKSempahore(), fence.GetVKFence(), &imageIndex));

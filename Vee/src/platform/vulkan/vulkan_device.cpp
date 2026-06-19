@@ -57,5 +57,8 @@ namespace vee
         FREE(m_device);
         FREE(m_physicalDevice);
         FREE(m_instance);
+        vmaDestroyAllocator(m_allocator);
+        FREE(m_surface);
+        FREE(m_swapchain);
     }
 }
