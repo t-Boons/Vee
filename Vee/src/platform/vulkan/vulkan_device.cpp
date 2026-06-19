@@ -54,11 +54,11 @@ namespace vee
 
     VulkanDevice::~VulkanDevice()
     {
-        FREE(m_device);
-        FREE(m_physicalDevice);
-        FREE(m_instance);
         vmaDestroyAllocator(m_allocator);
         FREE(m_surface);
         FREE(m_swapchain);
+        FREE(m_physicalDevice);
+        FREE(m_instance);
+        FREE(m_device);
     }
 }
